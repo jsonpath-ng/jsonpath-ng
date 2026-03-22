@@ -10,7 +10,7 @@ __pycache__/
 # Build and test artifacts
 /README.txt
 /dist
-/*.egg-info
+*.egg-info
 parser.out
 .cache
 .coverage

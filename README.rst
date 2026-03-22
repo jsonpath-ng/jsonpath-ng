@@ -1,13 +1,5 @@
 Python JSONPath Next-Generation
-=====================================================
-
-.. raw:: html
-
-   <p>
-     <a href="https://github.com/jsonpath-ng/jsonpath-ng/actions/workflows/ci.yml"><img src="https://github.com/jsonpath-ng/jsonpath-ng/actions/workflows/ci.yml/badge.svg" alt="Build Status" /></a>
-     <a href="https://pypi.python.org/pypi/jsonpath-ng"><img src="https://img.shields.io/pypi/v/jsonpath-ng.svg?maxAge=2592000?style=flat-square" alt="PyPI" /></a>
-   </p>
-
+===============================
 
 A final implementation of JSONPath for Python that aims to be standard compliant, including arithmetic
 and binary comparison operators, as defined in the original `JSONPath proposal`_.
@@ -367,6 +359,3 @@ limitations under the License.
 .. _`JSONPath proposal`: http://goessner.net/articles/JsonPath/
 .. _`jsonpath-rw`: https://github.com/kennknowles/python-jsonpath-rw
 .. _`jsonpath-rw-ext`: https://pypi.python.org/pypi/jsonpath-rw-ext/
-
-.. |PyPi downloads| image:: https://pypip.in/d/jsonpath-ng/badge.png
-   :target: https://pypi.python.org/pypi/jsonpath-ng
