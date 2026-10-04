@@ -1,4 +1,5 @@
 import copy
+from collections import UserDict
 
 import pytest
 from typing import Callable
@@ -67,6 +68,7 @@ update_test_cases = (
     # ------
     #
     ("foo", {"foo": 1}, 5, {"foo": 5}),
+    ("foo", UserDict({"foo": 1}), 5, UserDict({"foo": 5})),
     ("$.*", {"foo": 1, "bar": 2}, 3, {"foo": 3, "bar": 3}),
     #
     # Indexes
@@ -186,6 +188,52 @@ def test_update(parse: Callable[[str], JSONPath], expression: str, data, update_
         if isinstance(datum.full_path, (Root, This)): # when the type of `data` is str, int, float etc.
             data_copy2 = datum.value
     assert data_copy2 == expected_value
+
+
+@pytest.mark.parametrize("data", (["c"], "c", ("c",), 42, 1.5, True, False, None))
+@pytest.mark.parametrize("use_callback", (False, True))
+@parsers
+def test_field_update_ignores_non_mappings(parse, data, use_callback):
+    original = copy.deepcopy(data)
+
+    def callback(value, parent, field):
+        pytest.fail("The callback must not run when no field matches")
+
+    result = parse("c").update(data, callback if use_callback else 2)
+
+    assert result is data
+    assert data == original
+
+
+@parsers
+def test_field_update_in_heterogeneous_data(parse):
+    data = {"array": ["c"], "string": "c", "number": 1, "object": {"c": 1}}
+
+    result = parse("$.*.c").update(data, 2)
+
+    assert result is data
+    assert data == {"array": ["c"], "string": "c", "number": 1, "object": {"c": 2}}
+
+
+@parsers
+def test_field_update_in_duck_typed_mapping(parse):
+    class MappingLike:
+        def __init__(self):
+            self.data = {"c": 1}
+
+        def get(self, key, default=None):
+            return self.data.get(key, default)
+
+        def __contains__(self, key):
+            return key in self.data
+
+        def __setitem__(self, key, value):
+            self.data[key] = value
+
+    data = MappingLike()
+    assert parse("c").find(data)[0].value == 1
+    assert parse("c").update(data, 2) is data
+    assert data.data == {"c": 2}
 
 
 @parsers
