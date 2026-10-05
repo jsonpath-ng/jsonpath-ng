@@ -3,7 +3,7 @@ import copy
 import pytest
 from typing import Callable
 from jsonpath_ng.ext.parser import parse as ext_parse
-from jsonpath_ng.jsonpath import DatumInContext, Fields, Root, This
+from jsonpath_ng.jsonpath import DatumInContext, Fields, Index, Root, This
 from jsonpath_ng.lexer import JsonPathLexerError
 from jsonpath_ng.parser import parse as base_parse
 from jsonpath_ng import JSONPath
@@ -511,6 +511,18 @@ def test_nested_index_auto_id(auto_id_field, parse, string, target):
 def test_invalid_hyphenation_in_key():
     with pytest.raises(JsonPathLexerError):
         base_parse("foo.-baz")
+
+
+def test_index_hashable():
+    idx = Index(0)
+    assert hash(idx) == hash((0,))
+    assert {idx: "value"}[idx] == "value"
+
+
+def test_index_multi_indices_hashable():
+    idx = Index(0, 1, 2)
+    assert hash(idx) == hash((0, 1, 2))
+    assert {idx: "value"}[idx] == "value"
 
 
 @pytest.mark.parametrize(

@@ -794,7 +794,7 @@ class Index(JSONPath):
             value += [{} for __ in range(pad)]
 
     def __hash__(self):
-        return hash(self.index)
+        return hash(self.indices)
 
 
 class Slice(JSONPath):
