@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support negation of relative existence queries in extended filter expressions (e.g. `$[?(!@.field)]`).
 
 ### Fixed
+- Treat unquoted `null` in extended filter comparisons as JSON null rather than
+  the string `"null"`, while preserving quoted strings and field names (#49).
 - Ignore non-mapping values when updating named fields instead of raising `TypeError` (#104).
 - Return no matches for negative array indices beyond the start of an array,
   matching the behavior of out-of-range positive indices (#203).

@@ -24,11 +24,16 @@ from . import string as _string
 class ExtendedJsonPathLexer(lexer.JsonPathLexer):
     """Custom LALR-lexer for JsonPath"""
     literals = lexer.JsonPathLexer.literals + ['?', '@', '+', '*', '/', '-', '!']
-    tokens = (['BOOL'] +
+    tokens = (['BOOL', 'NULL'] +
               parser.JsonPathLexer.tokens +
               ['FILTER_OP', 'SORT_DIRECTION', 'FLOAT'])
 
     t_FILTER_OP = r'=~|==?|<=|>=|!=|<|>'
+
+    def t_NULL(self, t):
+        r'null(?![a-zA-Z0-9_@\-])'
+        t.value = None
+        return t
 
     def t_BOOL(self, t):
         r'true(?![a-zA-Z0-9_@\-])|false(?![a-zA-Z0-9_@\-])'
@@ -109,12 +114,17 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
         else:
             super(ExtendedJsonPathParser, self).p_jsonpath_named_operator(p)
 
+    def p_fields_null(self, p):
+        "fields : NULL"
+        p[0] = ['null']
+
     def p_expression(self, p):
         """expression : jsonpath
                       | jsonpath FILTER_OP ID
                       | jsonpath FILTER_OP FLOAT
                       | jsonpath FILTER_OP NUMBER
                       | jsonpath FILTER_OP BOOL
+                      | jsonpath FILTER_OP NULL
         """
         if len(p) == 2:
             left, op, right = p[1], None, None

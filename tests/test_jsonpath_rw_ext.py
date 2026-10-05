@@ -121,6 +121,16 @@ test_cases = (
         id="filter_eq3",
     ),
     pytest.param(
+        "objects[?(@.carrier == null)].type",
+        {"objects": [
+            {"type": "iPhone", "carrier": "at&t"},
+            {"type": "home", "carrier": None},
+            {"type": "string", "carrier": "null"},
+        ]},
+        ["home"],
+        id="filter-null-literal",
+    ),
+    pytest.param(
         'objects[?cow!="moo"]',
         {"objects": [{"cow": "moo"}, {"cow": "neigh"}]},
         [{"cow": "neigh"}],
@@ -590,6 +600,47 @@ test_cases = (
 def test_values(path, data, expected_values):
     results = parser.parse(path).find(data)
     assert_value_equality(results, expected_values)
+
+
+@pytest.mark.parametrize("op, expected", [
+    ("=", ["none"]),
+    ("==", ["none"]),
+    ("!=", ["string", "false", "zero", "empty"]),
+])
+def test_filter_null_comparison(op, expected):
+    data = [
+        {"name": "none", "value": None},
+        {"name": "string", "value": "null"},
+        {"name": "false", "value": False},
+        {"name": "zero", "value": 0},
+        {"name": "empty", "value": ""},
+        {"name": "missing"},
+    ]
+    matches = parser.parse(f"$[?(@.value {op} null)].name").find(data)
+    assert_value_equality(matches, expected)
+
+
+@pytest.mark.parametrize("literal", ["'null'", '"null"'])
+def test_filter_quoted_null_stays_string(literal):
+    data = [{"value": None}, {"value": "null"}]
+    matches = parser.parse(f"$[?(@.value == {literal})]").find(data)
+    assert_value_equality(matches, [{"value": "null"}])
+
+
+@pytest.mark.parametrize("field", ["nullable", "null0", "null_", "null-", "null@"])
+def test_null_prefix_stays_identifier(field):
+    matches = parser.parse(f"$.{field}").find({field: "value"})
+    assert_value_equality(matches, ["value"])
+    matches = parser.parse(f"$[?(@.value == {field})]").find(
+        [{"value": None}, {"value": field}]
+    )
+    assert_value_equality(matches, [{"value": field}])
+
+
+@pytest.mark.parametrize("path", ["null", "$.null", "$[null]", "$['null']"])
+def test_null_field_name(path):
+    matches = parser.parse(path).find({"null": "value"})
+    assert_value_equality(matches, ["value"])
 
 
 def test_filter_find_does_not_mutate_mapping():
