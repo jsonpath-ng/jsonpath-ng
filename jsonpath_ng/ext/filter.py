@@ -104,7 +104,7 @@ class Expression(JSONPath):
         found = []
         for data in datum:
             value = data.value
-            if type(self.value) is int:
+            if type(self.value) is int and isinstance(value, str):
                 try:
                     value = int(value)
                 except ValueError:

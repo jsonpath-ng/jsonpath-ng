@@ -4,7 +4,7 @@ from collections import UserDict
 import pytest
 from typing import Callable
 from jsonpath_ng.ext.parser import parse as ext_parse
-from jsonpath_ng.jsonpath import DatumInContext, Fields, Root, This
+from jsonpath_ng.jsonpath import DatumInContext, Fields, Index, Root, This
 from jsonpath_ng.lexer import JsonPathLexerError
 from jsonpath_ng.parser import parse as base_parse
 from jsonpath_ng import JSONPath
@@ -97,6 +97,8 @@ update_test_cases = (
     # --------
     #
     ("$.foo", {"foo": "bar"}, "baz", {"foo": "baz"}),
+    ("[-2].foo", [{"foo": 1}, {"foo": 2}], 3, [{"foo": 3}, {"foo": 2}]),
+    ("[-3].foo", [{"foo": 1}, {"foo": 2}], 3, [{"foo": 1}, {"foo": 2}]),
     ("foo.bar", {"foo": {"bar": 1}}, "baz", {"foo": {"bar": "baz"}}),
     #
     # Descendants
@@ -294,6 +296,9 @@ filter_test_cases = (
     # Docs examples
     ("foo[*].baz", {'foo': [{'baz': 1}, {'baz': 2}]}, lambda d: True, {'foo': [{}, {}]}),
     ("foo[*].baz", {'foo': [{'baz': 1}, {'baz': 2}]}, lambda d: d == 2, {'foo': [{'baz': 1}, {}]}),
+    # Child paths only filter values with an in-range parent index.
+    ("[-2].foo", [{"foo": 1}, {"foo": 2}], lambda d: True, [{}, {"foo": 2}]),
+    ("[-3].foo", [{"foo": 1}, {"foo": 2}], lambda d: True, [{"foo": 1}, {"foo": 2}]),
     # Wildcard issue fix
     ("*.baz", {"flag": False, "foo": {"bar": 1, "baz": 2}}, lambda d: True, {"flag": False, "foo": {"bar": 1}}),
 )
@@ -345,6 +350,20 @@ find_test_cases = (
     ("[5]", [42], [], []),
     ("[2]", [34, 65, 29, 59], [29], ["[2]"]),
     ("[0]", None, [], []),
+    ("[-1]", None, [], []),
+    ("[-1]", [], [], []),
+    ("[0]", [], [], []),
+    ("[-1]", [42], [42], ["[-1]"]),
+    ("[-2]", [42], [], []),
+    ("[-3]", [34, 65, 29], [34], ["[-3]"]),
+    ("[-4]", [34, 65, 29], [], []),
+    ("[3]", [34, 65, 29], [], []),
+    (
+        "[0,-4,-3,3,-1]",
+        [34, 65, 29],
+        [34, 34, 29],
+        ["[0]", "[-3]", "[-1]"],
+    ),
     # Indexing a dict matches nothing rather than raising KeyError (issue #93)
     ("[0]", {"foo": 1}, [], []),
     ("$.*[0].b", {"a": [{"b": 1}], "c": {"d": 2}}, [1], ["a.[0].b"]),
@@ -540,3 +559,31 @@ def test_nested_index_auto_id(auto_id_field, parse, string, target):
 def test_invalid_hyphenation_in_key():
     with pytest.raises(JsonPathLexerError):
         base_parse("foo.-baz")
+
+
+def test_index_hashable():
+    idx = Index(0)
+    assert hash(idx) == hash((0,))
+    assert {idx: "value"}[idx] == "value"
+
+
+def test_index_multi_indices_hashable():
+    idx = Index(0, 1, 2)
+    assert hash(idx) == hash((0, 1, 2))
+    assert {idx: "value"}[idx] == "value"
+
+
+@pytest.mark.parametrize(
+    "path, data, expected_values",
+    (
+        ("[-1]", [], []),
+        ("[-1]", [42], [42]),
+        ("[-2]", [42], []),
+    ),
+)
+@parsers
+def test_find_or_create_negative_index(parse, path, data, expected_values):
+    original = copy.deepcopy(data)
+    results = parse(path).find_or_create(data)
+    assert_value_equality(results, expected_values)
+    assert data == original
