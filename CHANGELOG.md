@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - Return no matches for negative array indices beyond the start of an array,
   matching the behavior of out-of-range positive indices (#203).
+- Fix extended filter equality against an integer literal truncating float values,
+  so `[?(@.v = 0)]` no longer matches an element with `v = 0.6` (#227).
 - `update()` with an in-place callback returning `None` no longer overwrites the field with `None` (#163)
 - Fix an `AttributeError` that occurs when an `Index` instance is hashed. (#224)
 - `Index.find` no longer raises `KeyError` when applied to a dict (e.g. `$.*[0]`
