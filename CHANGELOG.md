@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support negation of relative existence queries in extended filter expressions (e.g. `$[?(!@.field)]`).
 
 ### Fixed
+- Recursive slices such as `$..[*]` no longer coerce objects and scalars into
+  arrays, avoiding extra matches with incorrect paths and values (#96).
 - Ignore non-mapping values when updating named fields instead of raising `TypeError` (#104).
 - Return no matches for negative array indices beyond the start of an array,
   matching the behavior of out-of-range positive indices (#203).

@@ -448,7 +448,11 @@ class Descendants(JSONPath):
             left_matches = [left_matches]
 
         def match_recursively(datum):
-            right_matches = self.right.find(datum)
+            # Recursive slices must not invent array indices by coercing values.
+            if isinstance(self.right, Slice) and isinstance(datum.value, (dict, int, float, str, bool)):
+                right_matches = []
+            else:
+                right_matches = self.right.find(datum)
 
             # Manually do the * or [*] to avoid coercion and recurse just the right-hand pattern
             if isinstance(datum.value, list):
