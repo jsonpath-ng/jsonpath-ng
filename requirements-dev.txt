@@ -2,3 +2,4 @@ tox
 flake8
 pytest
 hypothesis
+pytest-randomly

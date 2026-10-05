@@ -2,11 +2,11 @@ name: CI
 on:
   push:
     branches:
-      - '*'
-    tags:
-      - 'v*'
+      - 'main'
+      - 'master'
   pull_request:
     branches:
+      - 'main'
       - master
 permissions:
   contents: read
@@ -16,16 +16,16 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
           - "3.14"
+          - "3.15"
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         allow-prereleases: true
         python-version: ${{ matrix.python-version }}
@@ -35,4 +35,4 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
     - name: Run tests
-      run: tox run -e py${{ matrix.python-version }}
+      run: tox run -e py${{ matrix.python-version }},mypy-py${{ matrix.python-version }}

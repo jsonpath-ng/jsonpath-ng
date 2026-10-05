@@ -62,7 +62,7 @@ class JsonPathParser:
 
     # ===================== PLY Parser specification =====================
 
-    precedence = [
+    precedence: list[tuple[str, str] | tuple[str, str, str]] = [
         ('left', ','),
         ('left', 'DOUBLEDOT'),
         ('left', '.'),
