@@ -5,9 +5,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Support Python 3.15.
+- Add a `py.typed` marker.
+
 ### Fixed
+- Return no matches for negative array indices beyond the start of an array,
+  matching the behavior of out-of-range positive indices (#203).
 - Fix extended filter equality against an integer literal truncating float values,
-  so `[?(@.v = 0)]` no longer matches an element with `v = 0.6` ([#227](https://github.com/h2non/jsonpath-ng/issues/227)).
+  so `[?(@.v = 0)]` no longer matches an element with `v = 0.6` (#227).
+- `update()` with an in-place callback returning `None` no longer overwrites the field with `None` (#163)
+- Fix an `AttributeError` that occurs when an `Index` instance is hashed. (#224)
+- `Index.find` no longer raises `KeyError` when applied to a dict (e.g. `$.*[0]`
+  where `*` matched a dict value); it now matches nothing, as the docstring
+  promises ([#93](https://github.com/jsonpath-ng/jsonpath-ng/issues/93))
+- Fix extended parser handling of field names that start with `true` or `false`.
+- Stop serializing `Child` paths with surrounding parentheses. (#215)
+- Avoid mutating dictionaries while evaluating extended filter expressions.
+- Fix broken `Slice` serialization behavior.
+
+  Previously, a slice like `[0:]` would serialize to `[]`,
+  and a slice like `[::2]` would serialize to `[:2]`.
+
+### Removed
+- Drop support for Python 3.10.
 
 ## [1.8.0] - 2026-02-24
 
@@ -47,5 +68,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 - Python 3.8 and 3.9 no longer supported
 
-[Unreleased]: https://github.com/h2non/jsonpath-ng/compare/v1.8.0...HEAD
-[1.8.0]: https://github.com/h2non/jsonpath-ng/compare/v1.7.0...v1.8.0
+[Unreleased]: https://github.com/jsonpath-ng/jsonpath-ng/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/jsonpath-ng/jsonpath-ng/compare/v1.7.0...v1.8.0

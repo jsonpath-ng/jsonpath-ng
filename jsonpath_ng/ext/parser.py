@@ -31,7 +31,7 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
     t_FILTER_OP = r'=~|==?|<=|>=|!=|<|>'
 
     def t_BOOL(self, t):
-        r'true|false'
+        r'true(?![a-zA-Z0-9_@\-])|false(?![a-zA-Z0-9_@\-])'
         t.value = True if t.value == 'true' else False
         return t
 

@@ -4,6 +4,8 @@ import logging
 from itertools import *  # noqa
 import re
 
+from jsonpath_ng.exceptions import JSONPathError
+
 # Get logger name
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class JSONPath:
         """
         raise NotImplementedError()
 
-    def find_or_create(self, data):
+    def find_or_create(self, data) -> List[DatumInContext]:
         return self.find(data)
 
     def update(self, data, val):
@@ -181,6 +183,10 @@ class AutoIdForDatum(DatumInContext):
     def value(self):
         return str(self.datum.id_pseudopath)
 
+    @value.setter
+    def value(self, value):
+        raise JSONPathError("The value of an auto ID cannot be set.")
+
     @property
     def path(self):
         return self.id_field
@@ -320,8 +326,7 @@ class Child(JSONPath):
         if isinstance(self.right, SortedThis):
             return f"{self.left}{self.right}"
 
-        # Parentheses are required to ensure precedence.
-        return f"({self.left}.{self.right})"
+        return f"{self.left}.{self.right}"
 
     def __repr__(self):
         return '%s(%r, %r)' % (self.__class__.__name__, self.left, self.right)
@@ -664,7 +669,9 @@ class Fields(JSONPath):
                     data[field] = {}
                 if type(data) is not bool and field in data:
                     if hasattr(val, '__call__'):
-                        data[field] = val(data[field], data, field)
+                        val_result = val(data[field], data, field)
+                        if val_result is not None:
+                            data[field] = val_result
                     else:
                         data[field] = val
         return data
@@ -724,9 +731,15 @@ class Index(JSONPath):
                 datum.value = _create_list_key(datum.value)
             self._pad_value(datum.value)
         rv = []
+        if isinstance(datum.value, dict):
+            # Integer indices apply to sequences, not mappings. A dict passes
+            # the len() check below but datum.value[index] is a key lookup that
+            # raises KeyError, so match nothing instead (as the class docstring
+            # promises) -- e.g. ``$.*[0]`` where ``*`` matched a dict value.
+            return rv
         for index in self.indices:
             # invalid indices do not crash, return [] instead
-            if datum.value and len(datum.value) > index:
+            if datum.value and -len(datum.value) <= index < len(datum.value):
                 rv += [DatumInContext(datum.value[index], path=Index(index), context=datum)]
         return rv
 
@@ -743,7 +756,9 @@ class Index(JSONPath):
             self._pad_value(data)
         if hasattr(val, '__call__'):
             for index in self.indices:
-                val.__call__(data[index], data, index)
+                val_result = val.__call__(data[index], data, index)
+                if val_result is not None:
+                    data[index] = val_result
         else:
             for index in self.indices:
                 if len(data) > index:
@@ -779,7 +794,7 @@ class Index(JSONPath):
             value += [{} for __ in range(pad)]
 
     def __hash__(self):
-        return hash(self.index)
+        return hash(self.indices)
 
 
 class Slice(JSONPath):
@@ -847,12 +862,20 @@ class Slice(JSONPath):
         return data
 
     def __str__(self):
-        if self.start is None and self.end is None and self.step is None:
-            return '[*]'
-        else:
-            return '[%s%s%s]' % (self.start or '',
-                                   ':%d'%self.end if self.end else '',
-                                   ':%d'%self.step if self.step else '')
+        elements = []
+
+        for i, element in enumerate((self.start, self.end, self.step)):
+            if element is None:
+                continue
+            # Ensure that `elements` contains `i` elements, then append `element`.
+            elements.extend([""] * (i - len(elements)))
+            elements.append(str(element))
+
+        # If only `start` is present, add a blank element to ensure a trailing ':'.
+        if len(elements) == 1:
+            elements.append("")
+
+        return f'[{":".join(elements) or "*"}]'
 
     def __repr__(self):
         return '%s(start=%r,end=%r,step=%r)' % (self.__class__.__name__, self.start, self.end, self.step)
