@@ -23,7 +23,7 @@ from . import string as _string
 
 class ExtendedJsonPathLexer(lexer.JsonPathLexer):
     """Custom LALR-lexer for JsonPath"""
-    literals = lexer.JsonPathLexer.literals + ['?', '@', '+', '*', '/', '-']
+    literals = lexer.JsonPathLexer.literals + ['?', '@', '+', '*', '/', '-', '!']
     tokens = (['BOOL'] +
               parser.JsonPathLexer.tokens +
               ['FILTER_OP', 'SORT_DIRECTION', 'FLOAT'])
@@ -121,6 +121,10 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
         else:
             __, left, op, right = p
         p[0] = _filter.Expression(left, op, right)
+
+    def p_expression_not(self, p):
+        "expression : '!' jsonpath"
+        p[0] = _filter.Expression(p[2], p[1], None)
 
     def p_expressions_expression(self, p):
         "expressions : expression"
