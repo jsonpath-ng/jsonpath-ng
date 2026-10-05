@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Support Python 3.15.
 - Add a `py.typed` marker.
+- Support negation of relative existence queries in extended filter expressions (e.g. `$[?(!@.field)]`).
 
 ### Fixed
 - Ignore non-mapping values when updating named fields instead of raising `TypeError` (#104).
@@ -17,9 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   so `[?(@.v = 0)]` no longer matches an element with `v = 0.6` (#227).
 - `update()` with an in-place callback returning `None` no longer overwrites the field with `None` (#163)
 - Fix an `AttributeError` that occurs when an `Index` instance is hashed. (#224)
-- `Index.find` no longer raises `KeyError` when applied to a dict (e.g. `$.*[0]`
-  where `*` matched a dict value); it now matches nothing, as the docstring
-  promises ([#93](https://github.com/jsonpath-ng/jsonpath-ng/issues/93))
+- `Index.find` no longer raises `KeyError` when applied to a dict
+  (e.g. `$.*[0]`, where `*` matched a dict value).
+  It now matches nothing, as the docstring promises. (#93)
 - Fix extended parser handling of field names that start with `true` or `false`.
 - Stop serializing `Child` paths with surrounding parentheses. (#215)
 - Avoid mutating dictionaries while evaluating extended filter expressions.
@@ -42,14 +43,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support equality checking of `Operation` instances
 - Support string serialization of `Union` and `Intersect` instances
 - Support comma-separated indices
-- Add typings for IDE autocomplete
+- Add some type annotations
 
 ### Changed
 - Rename `ExtentedJsonPathParser`
 - Remove ply dependency
 
 ### Fixed
-- Fix `False` and `None` values
+- `[*]` now correctly returns results when applied to a `False` or other falsy non-`None` value;
+  previously it returned an empty list (#198).
+- `update()` no longer raises `TypeError` when a value in the data structure is a boolean (#73).
+- `update_or_create()` now works correctly when the root data structure is a list (#108).
 - Fix single constant case
 - Update field filter to resolve wildcard path issue
 - Vendor copy of ply and remove pickle support from the vendored copy to resolve [CVE-2025-56005](https://nvd.nist.gov/vuln/detail/CVE-2025-56005)
