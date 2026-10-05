@@ -36,3 +36,16 @@ def test_serialization(parse, data, expected_serialization):
 
     # Now that the test has succeeded, do an additional sanity check.
     assert parsed == parse(reserialized)
+
+
+def test_find_recursive_wildcard():
+    data = {"a": ["foo", "bar"]}
+
+    matches = jsonpath_ng.parse("$..[*]").find(data)
+
+    assert [(str(match.full_path), match.value) for match in matches] == [
+        ("a.[0]", "foo"),
+        ("a.[1]", "bar"),
+    ]
+    for match in matches:
+        assert jsonpath_ng.parse(str(match.full_path)).find(data)[0].value == match.value
