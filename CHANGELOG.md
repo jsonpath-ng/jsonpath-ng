@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add a `py.typed` marker.
 
 ### Fixed
+- Ignore non-mapping values when updating named fields instead of raising `TypeError` (#104).
 - Return no matches for negative array indices beyond the start of an array,
   matching the behavior of out-of-range positive indices (#203).
 - Fix extended filter equality against an integer literal truncating float values,

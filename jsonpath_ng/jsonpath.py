@@ -657,6 +657,8 @@ class Fields(JSONPath):
         return [fd for fd in field_data if fd is not None]
 
     def update(self, data, val):
+        if not hasattr(data, 'get'):
+            return data
         return self._update_base(data, val, create=False)
 
     def update_or_create(self, data, val):
