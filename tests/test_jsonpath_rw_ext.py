@@ -517,7 +517,25 @@ test_cases = (
         "foo[?(@.v = 0)].k",
         {"foo": [{"k": "A", "v": 0.0}, {"k": "B", "v": 0.6}, {"k": "C", "v": 0}]},
         ["A", "C"],
-        id="issue-227-int-no-float-truncation",
+        id="int-no-float-truncation",
+    ),
+    pytest.param(
+        "foo[?(@.v == 0)].k",
+        {"foo": [{"k": "A", "v": 0.0}, {"k": "B", "v": 0.6}, {"k": "C", "v": 0}]},
+        ["A", "C"],
+        id="int-no-float-truncation-double-equals",
+    ),
+    pytest.param(
+        "foo[?(@.v = 0)].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B", "v": 0}]},
+        ["B"],
+        id="none-lhs-does-not-crash",
+    ),
+    pytest.param(
+        "foo[?(@.v = -1)].k",
+        {"foo": [{"k": "A", "v": -0.9}, {"k": "B", "v": -1}]},
+        ["B"],
+        id="negative-int-rhs-no-float-truncation",
     ),
 )
 
