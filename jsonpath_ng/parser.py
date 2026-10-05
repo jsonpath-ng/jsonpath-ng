@@ -2,7 +2,7 @@ import logging
 import sys
 import os.path
 
-import ply.yacc
+import jsonpath_ng._ply.yacc
 
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.jsonpath import *
@@ -33,12 +33,6 @@ class JsonPathParser:
         self.debug = debug
         self.lexer_class = lexer_class or JsonPathLexer # Crufty but works around statefulness in PLY
 
-    def parse(self, string, lexer = None):
-        lexer = lexer or self.lexer_class()
-        return self.parse_token_stream(lexer.tokenize(string))
-
-    def parse_token_stream(self, token_iterator, start_symbol='jsonpath'):
-
         # Since PLY has some crufty aspects and dumps files, we try to keep them local
         # However, we need to derive the name of the output Python file :-/
         output_directory = os.path.dirname(__file__)
@@ -47,29 +41,35 @@ class JsonPathParser:
         except:
             module_name = __name__
 
+        start_symbol = 'jsonpath'
         parsing_table_module = '_'.join([module_name, start_symbol, 'parsetab'])
 
-        # And we regenerate the parse table every time;
-        # it doesn't actually take that long!
-        new_parser = ply.yacc.yacc(module=self,
-                                   debug=self.debug,
-                                   tabmodule = parsing_table_module,
-                                   outputdir = output_directory,
-                                   write_tables=0,
-                                   start = start_symbol,
-                                   errorlog = logger)
+        # Generate the parse table
+        self.parser = jsonpath_ng._ply.yacc.yacc(module=self,
+                                    debug=self.debug,
+                                    tabmodule = parsing_table_module,
+                                    outputdir = output_directory,
+                                    write_tables=0,
+                                    start = start_symbol,
+                                    errorlog = logger)
 
-        return new_parser.parse(lexer = IteratorToTokenStream(token_iterator))
+    def parse(self, string, lexer = None) -> JSONPath:
+        lexer = lexer or self.lexer_class()
+        return self.parse_token_stream(lexer.tokenize(string))
+
+    def parse_token_stream(self, token_iterator):
+        return self.parser.parse(lexer = IteratorToTokenStream(token_iterator))
 
     # ===================== PLY Parser specification =====================
 
-    precedence = [
+    precedence: list[tuple[str, str] | tuple[str, str, str]] = [
         ('left', ','),
         ('left', 'DOUBLEDOT'),
         ('left', '.'),
         ('left', '|'),
         ('left', '&'),
         ('left', 'WHERE'),
+        ('left', 'WHERENOT'),
     ]
 
     def p_error(self, t):
@@ -82,6 +82,7 @@ class JsonPathParser:
         """jsonpath : jsonpath '.' jsonpath
                     | jsonpath DOUBLEDOT jsonpath
                     | jsonpath WHERE jsonpath
+                    | jsonpath WHERENOT jsonpath
                     | jsonpath '|' jsonpath
                     | jsonpath '&' jsonpath"""
         op = p[2]
@@ -92,6 +93,8 @@ class JsonPathParser:
             p[0] = Descendants(p[1], p[3])
         elif op == 'where':
             p[0] = Where(p[1], p[3])
+        elif op == 'wherenot':
+            p[0] = WhereNot(p[1], p[3])
         elif op == '|':
             p[0] = Union(p[1], p[3])
         elif op == '&':
@@ -117,7 +120,7 @@ class JsonPathParser:
 
     def p_jsonpath_idx(self, p):
         "jsonpath : '[' idx ']'"
-        p[0] = p[2]
+        p[0] = Index(*p[2])
 
     def p_jsonpath_slice(self, p):
         "jsonpath : '[' slice ']'"
@@ -133,7 +136,7 @@ class JsonPathParser:
 
     def p_jsonpath_child_idxbrackets(self, p):
         "jsonpath : jsonpath '[' idx ']'"
-        p[0] = Child(p[1], p[3])
+        p[0] = Child(p[1], Index(*p[3]))
 
     def p_jsonpath_child_slicebrackets(self, p):
         "jsonpath : jsonpath '[' slice ']'"
@@ -146,9 +149,12 @@ class JsonPathParser:
     # Because fields in brackets cannot be '*' - that is reserved for array indices
     def p_fields_or_any(self, p):
         """fields_or_any : fields
-                         | '*'    """
+                         | '*'
+                         | NUMBER"""
         if p[1] == '*':
             p[0] = ['*']
+        elif isinstance(p[1], int):
+            p[0] = [str(p[1])]
         else:
             p[0] = p[1]
 
@@ -162,7 +168,11 @@ class JsonPathParser:
 
     def p_idx(self, p):
         "idx : NUMBER"
-        p[0] = Index(p[1])
+        p[0] = [p[1]]
+
+    def p_idx_comma(self, p):
+        "idx : idx ',' idx "
+        p[0] = p[1] + p[3]
 
     def p_slice_any(self, p):
         "slice : '*'"

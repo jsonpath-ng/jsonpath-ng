@@ -10,10 +10,10 @@ def assert_value_equality(results, expected_values):
 
     left_values = [result.value for result in results]
     if isinstance(expected_values, list):
-        assert left_values == expected_values
+        assert left_values == expected_values, f"{left_values!r} != {expected_values!r}"
     elif isinstance(expected_values, set):
         assert len(left_values) == len(expected_values)
-        assert set(left_values) == expected_values
+        assert set(left_values) == expected_values, f"{left_values!r} != {expected_values!r}"
     else:
         assert results[0].value == expected_values
 

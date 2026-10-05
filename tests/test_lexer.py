@@ -24,6 +24,7 @@ token_test_cases = (
     ("`this`", (("this", "NAMED_OPERATOR"),)),
     ("|", (("|", "|"),)),
     ("where", (("where", "WHERE"),)),
+    ("wherenot", (("wherenot", "WHERENOT"),)),
 )
 
 

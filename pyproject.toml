@@ -1,3 +1,25 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+# mypy
+# ----
+
+[tool.mypy]
+packages = "jsonpath_ng"
+# strict = true
+sqlite_cache = true
+
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+    "jsonpath_ng._ply.*",
+]
+
+
+# pytest
+# ------
+
 [tool.pytest.ini_options]
 filterwarnings = [
     # Escalate warnings to errors.
@@ -6,3 +28,12 @@ filterwarnings = [
     # The ply package doesn't close its debug log file. Ignore this warning.
     "ignore::ResourceWarning",
 ]
+
+
+# codespell
+# ---------
+
+[tool.codespell]
+skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv'
+check-hidden = true
+ignore-words-list = 'nd'

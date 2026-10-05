@@ -31,7 +31,7 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
     t_FILTER_OP = r'=~|==?|<=|>=|!=|<|>'
 
     def t_BOOL(self, t):
-        r'true|false'
+        r'true(?![a-zA-Z0-9_@\-])|false(?![a-zA-Z0-9_@\-])'
         t.value = True if t.value == 'true' else False
         return t
 
@@ -53,14 +53,14 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
         return t
 
 
-class ExtentedJsonPathParser(parser.JsonPathParser):
+class ExtendedJsonPathParser(parser.JsonPathParser):
     """Custom LALR-parser for JsonPath"""
 
     tokens = ExtendedJsonPathLexer.tokens
 
     def __init__(self, debug=False, lexer_class=None):
         lexer_class = lexer_class or ExtendedJsonPathLexer
-        super(ExtentedJsonPathParser, self).__init__(debug, lexer_class)
+        super(ExtendedJsonPathParser, self).__init__(debug, lexer_class)
 
     def p_jsonpath_operator_jsonpath(self, p):
         """jsonpath : NUMBER operator NUMBER
@@ -96,6 +96,8 @@ class ExtentedJsonPathParser(parser.JsonPathParser):
             p[0] = _iterable.Len()
         elif p[1] == 'keys':
             p[0] = _iterable.Keys()
+        elif p[1] == 'path':
+            p[0] = _iterable.Path()
         elif p[1] == 'sorted':
             p[0] = _iterable.SortedThis()
         elif p[1].startswith("split("):
@@ -105,7 +107,7 @@ class ExtentedJsonPathParser(parser.JsonPathParser):
         elif p[1].startswith("str("):
             p[0] = _string.Str(p[1])
         else:
-            super(ExtentedJsonPathParser, self).p_jsonpath_named_operator(p)
+            super(ExtendedJsonPathParser, self).p_jsonpath_named_operator(p)
 
     def p_expression(self, p):
         """expression : jsonpath
@@ -173,6 +175,8 @@ class ExtentedJsonPathParser(parser.JsonPathParser):
         ('nonassoc', 'ID'),
     ]
 
+# XXX This is here for backward compatibility
+ExtentedJsonPathParser = ExtendedJsonPathParser
 
 def parse(path, debug=False):
-    return ExtentedJsonPathParser(debug=debug).parse(path)
+    return ExtendedJsonPathParser(debug=debug).parse(path)

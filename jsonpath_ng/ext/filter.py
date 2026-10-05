@@ -14,7 +14,7 @@
 import operator
 import re
 
-from .. import JSONPath, DatumInContext, Index
+from .. import JSONPath, DatumInContext, Fields, Index
 
 
 OPERATOR_MAP = {
@@ -42,25 +42,25 @@ class Filter(JSONPath):
         datum = DatumInContext.wrap(datum)
 
         if isinstance(datum.value, dict):
-            datum.value = list(datum.value.values())
-
-        if not isinstance(datum.value, list):
+            return [
+                DatumInContext(value, path=Fields(key), context=datum)
+                for key, value in datum.value.items()
+                if all(expression.find(value) for expression in self.expressions)
+            ]
+        elif isinstance(datum.value, list):
+            return [
+                DatumInContext(value, path=Index(index), context=datum)
+                for index, value in enumerate(datum.value)
+                if all(expression.find(value) for expression in self.expressions)
+            ]
+        else:
             return []
-
-        return [DatumInContext(datum.value[i], path=Index(i), context=datum)
-                for i in range(0, len(datum.value))
-                if (len(self.expressions) ==
-                    len(list(filter(lambda x: x.find(datum.value[i]),
-                                    self.expressions))))]
 
     def filter(self, fn, data):
         # NOTE: We reverse the order just to make sure the indexes are preserved upon
         #  removal.
         for datum in reversed(self.find(data)):
-            index_obj = datum.path
-            if isinstance(data, dict):
-                index_obj.index = list(data)[index_obj.index]
-            index_obj.filter(fn, data)
+            datum.path.filter(fn, data)
         return data
 
     def update(self, data, val):
@@ -107,14 +107,9 @@ class Expression(JSONPath):
         found = []
         for data in datum:
             value = data.value
-            if isinstance(self.value, int):
+            if type(self.value) is int and isinstance(value, str):
                 try:
                     value = int(value)
-                except ValueError:
-                    continue
-            elif isinstance(self.value, bool):
-                try:
-                    value = bool(value)
                 except ValueError:
                     continue
 

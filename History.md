@@ -1,3 +1,19 @@
+1.7.0 / 2024-10-11
+===================
+  * Allow raw numeric values to be used as keys
+  * Add `wherenot`
+  * Added EZRegex pattern for the split extension regex
+  * Added negative and * indices and quotes to `Split` parameters
+  * Typo: duplicate line removed.
+  * Added `path` extension that exposes datum's path from the jsonpath expression itself.
+  * Remove Python 3.7 support
+  *  Only construct the parse table once
+  * updated test for `jsonpath.py` changes
+  * fix for Updating a json object fails if the value of a key is boolean #73
+  * Add Codespaces configuration
+  * Add `.editorconfig`
+  * Fix a GitHub workflow schema issue
+
 1.6.1 / 2024-01-11
 ===================
   * Bump actions/setup-python from 4 to 5
@@ -137,7 +153,7 @@ v1.5.0 / 2020-03-06
   * feat(History): add History file
   * fix(travis-ci): ignore versions
   * feat(requirements): add missing pytest-cov dependency
-  * refactor(requirements): use version contraint
+  * refactor(requirements): use version constraint
   * fix: remove .cache files
   * feat: add required files
   * fix(travis-ci): install proper packages
@@ -156,7 +172,7 @@ v1.4.3 / 2017-08-24
 
   * fix(travis-ci): ignore versions
   * feat(requirements): add missing pytest-cov dependency
-  * refactor(requirements): use version contraint
+  * refactor(requirements): use version constraint
   * fix: remove .cache files
   * feat: add required files
   * fix(travis-ci): install proper packages

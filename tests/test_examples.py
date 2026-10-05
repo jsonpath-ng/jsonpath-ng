@@ -37,8 +37,14 @@ from jsonpath_ng.jsonpath import Child, Descendants, Fields, Index, Root, Slice,
         ("$..book[-1:]", Child(Descendants(Root(), Fields("book")), Slice(start=-1))),
         #
         # The first two books
-        # "$..book[0,1]"  # Not implemented
+        ("$..book[0,1]", Child(Descendants(Root(), Fields("book")), Index(0,1))),
         ("$..book[:2]", Child(Descendants(Root(), Fields("book")), Slice(end=2))),
+        #
+        # Categories and authors of all books
+        (
+            "$..book[0][category,author]", 
+            Child(Child(Descendants(Root(), Fields('book')), Index(0)), Fields('category','author')),
+        ),
         #
         # Filter all books with an ISBN
         (

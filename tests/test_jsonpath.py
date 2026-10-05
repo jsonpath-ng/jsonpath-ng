@@ -1,11 +1,13 @@
 import copy
+from collections import UserDict
 
 import pytest
-
+from typing import Callable
 from jsonpath_ng.ext.parser import parse as ext_parse
-from jsonpath_ng.jsonpath import DatumInContext, Fields, Root, This
+from jsonpath_ng.jsonpath import DatumInContext, Fields, Index, Root, This
 from jsonpath_ng.lexer import JsonPathLexerError
 from jsonpath_ng.parser import parse as base_parse
+from jsonpath_ng import JSONPath
 
 from .helpers import assert_full_path_equality, assert_value_equality
 
@@ -66,12 +68,15 @@ update_test_cases = (
     # ------
     #
     ("foo", {"foo": 1}, 5, {"foo": 5}),
+    ("foo", UserDict({"foo": 1}), 5, UserDict({"foo": 5})),
     ("$.*", {"foo": 1, "bar": 2}, 3, {"foo": 3, "bar": 3}),
     #
     # Indexes
     # -------
     #
     ("[0]", ["foo", "bar", "baz"], "test", ["test", "bar", "baz"]),
+    ("[0, 1]", ["foo", "bar", "baz"], "test", ["test", "test", "baz"]),
+    ("[0, 1]", ["foo", "bar", "baz"], ["test", "test 1"], ["test", "test 1", "baz"]),
     #
     # Slices
     # ------
@@ -92,6 +97,8 @@ update_test_cases = (
     # --------
     #
     ("$.foo", {"foo": "bar"}, "baz", {"foo": "baz"}),
+    ("[-2].foo", [{"foo": 1}, {"foo": 2}], 3, [{"foo": 3}, {"foo": 2}]),
+    ("[-3].foo", [{"foo": 1}, {"foo": 2}], 3, [{"foo": 1}, {"foo": 2}]),
     ("foo.bar", {"foo": {"bar": 1}}, "baz", {"foo": {"bar": "baz"}}),
     #
     # Descendants
@@ -127,6 +134,16 @@ update_test_cases = (
         {"foo": {"bar": 3, "flag": 1}, "baz": {"bar": 2}},
     ),
     #
+    # WhereNot
+    # --------
+    #
+    (
+        '(* wherenot flag) .. bar',
+        {'foo': {'bar': 1, 'flag': 1}, 'baz': {'bar': 2}},
+        4,
+        {'foo': {'bar': 1, 'flag': 1}, 'baz': {'bar': 4}},
+    ),
+    #
     # Lambdas
     # -------
     #
@@ -154,10 +171,148 @@ update_test_cases = (
     update_test_cases,
 )
 @parsers
-def test_update(parse, expression, data, update_value, expected_value):
+def test_update(parse: Callable[[str], JSONPath], expression: str, data, update_value, expected_value):
     data_copy = copy.deepcopy(data)
-    result = parse(expression).update(data_copy, update_value)
+    update_value_copy = copy.deepcopy(update_value)
+    result = parse(expression).update(data_copy, update_value_copy)
     assert result == expected_value
+
+    # inplace update testing
+    data_copy2 = copy.deepcopy(data)
+    update_value_copy2 = copy.deepcopy(update_value)
+    datums = parse(expression).find(data_copy2)
+    batch_update = isinstance(update_value, list) and len(datums) == len(update_value)
+    for i, datum in enumerate(datums):
+        if batch_update:
+            datum.value = update_value_copy2[i]
+        else:
+            datum.value = update_value_copy2
+        if isinstance(datum.full_path, (Root, This)): # when the type of `data` is str, int, float etc.
+            data_copy2 = datum.value
+    assert data_copy2 == expected_value
+
+
+@pytest.mark.parametrize("data", (["c"], "c", ("c",), 42, 1.5, True, False, None))
+@pytest.mark.parametrize("use_callback", (False, True))
+@parsers
+def test_field_update_ignores_non_mappings(parse, data, use_callback):
+    original = copy.deepcopy(data)
+
+    def callback(value, parent, field):
+        pytest.fail("The callback must not run when no field matches")
+
+    result = parse("c").update(data, callback if use_callback else 2)
+
+    assert result is data
+    assert data == original
+
+
+@parsers
+def test_field_update_in_heterogeneous_data(parse):
+    data = {"array": ["c"], "string": "c", "number": 1, "object": {"c": 1}}
+
+    result = parse("$.*.c").update(data, 2)
+
+    assert result is data
+    assert data == {"array": ["c"], "string": "c", "number": 1, "object": {"c": 2}}
+
+
+@parsers
+def test_field_update_in_duck_typed_mapping(parse):
+    class MappingLike:
+        def __init__(self):
+            self.data = {"c": 1}
+
+        def get(self, key, default=None):
+            return self.data.get(key, default)
+
+        def __contains__(self, key):
+            return key in self.data
+
+        def __setitem__(self, key, value):
+            self.data[key] = value
+
+    data = MappingLike()
+    assert parse("c").find(data)[0].value == 1
+    assert parse("c").update(data, 2) is data
+    assert data.data == {"c": 2}
+
+
+@parsers
+def test_update_with_inplace_callback(parse: Callable[[str], JSONPath]):
+    """Regression test for #163: update() with an in-place callback that
+    returns None should not overwrite the field with None."""
+
+    def lowercase_inplace(orig, data, field):
+        data[field] = data[field].lower()
+        # intentionally returns None
+
+    data = {
+        'Data_cat': {
+            'data_entry': [
+                {'value': 0, 'UPPERCASE': 'UPPERCASE_A'},
+                {'value': 2, 'UPPERCASE': 'UPPERCASE_B'},
+            ]
+        }
+    }
+    parse('$..UPPERCASE').update(data, lowercase_inplace)
+    assert data == {
+        'Data_cat': {
+            'data_entry': [
+                {'value': 0, 'UPPERCASE': 'uppercase_a'},
+                {'value': 2, 'UPPERCASE': 'uppercase_b'},
+            ]
+        }
+    }
+
+
+@parsers
+def test_update_with_returning_callback(parse: Callable[[str], JSONPath]):
+    """Ensure callbacks that return a value still work correctly."""
+
+    def lowercase_return(orig, data, field):
+        return orig.lower()
+
+    data = {
+        'Data_cat': {
+            'data_entry': [
+                {'value': 0, 'UPPERCASE': 'UPPERCASE_A'},
+                {'value': 2, 'UPPERCASE': 'UPPERCASE_B'},
+            ]
+        }
+    }
+    parse('$..UPPERCASE').update(data, lowercase_return)
+    assert data == {
+        'Data_cat': {
+            'data_entry': [
+                {'value': 0, 'UPPERCASE': 'uppercase_a'},
+                {'value': 2, 'UPPERCASE': 'uppercase_b'},
+            ]
+        }
+    }
+
+
+filter_test_cases = (
+    # Docs examples
+    ("foo[*].baz", {'foo': [{'baz': 1}, {'baz': 2}]}, lambda d: True, {'foo': [{}, {}]}),
+    ("foo[*].baz", {'foo': [{'baz': 1}, {'baz': 2}]}, lambda d: d == 2, {'foo': [{'baz': 1}, {}]}),
+    # Child paths only filter values with an in-range parent index.
+    ("[-2].foo", [{"foo": 1}, {"foo": 2}], lambda d: True, [{}, {"foo": 2}]),
+    ("[-3].foo", [{"foo": 1}, {"foo": 2}], lambda d: True, [{"foo": 1}, {"foo": 2}]),
+    # Wildcard issue fix
+    ("*.baz", {"flag": False, "foo": {"bar": 1, "baz": 2}}, lambda d: True, {"flag": False, "foo": {"bar": 1}}),
+)
+
+
+@pytest.mark.parametrize(
+    "expression, data, filter_function, expected_value",
+    filter_test_cases,
+)
+@parsers
+def test_filter(parse: Callable[[str], JSONPath], expression: str, data, filter_function: Callable, expected_value):
+    data_copy = copy.deepcopy(data)
+    parse(expression).filter(filter_function, data_copy)
+    assert data_copy == expected_value
 
 
 find_test_cases = (
@@ -195,6 +350,23 @@ find_test_cases = (
     ("[5]", [42], [], []),
     ("[2]", [34, 65, 29, 59], [29], ["[2]"]),
     ("[0]", None, [], []),
+    ("[-1]", None, [], []),
+    ("[-1]", [], [], []),
+    ("[0]", [], [], []),
+    ("[-1]", [42], [42], ["[-1]"]),
+    ("[-2]", [42], [], []),
+    ("[-3]", [34, 65, 29], [34], ["[-3]"]),
+    ("[-4]", [34, 65, 29], [], []),
+    ("[3]", [34, 65, 29], [], []),
+    (
+        "[0,-4,-3,3,-1]",
+        [34, 65, 29],
+        [34, 34, 29],
+        ["[0]", "[-3]", "[-1]"],
+    ),
+    # Indexing a dict matches nothing rather than raising KeyError (issue #93)
+    ("[0]", {"foo": 1}, [], []),
+    ("$.*[0].b", {"a": [{"b": 1}], "c": {"d": 2}}, [1], ["a.[0].b"]),
     #
     # Slices
     # ------
@@ -213,6 +385,11 @@ find_test_cases = (
     # --------------------
     #
     ("[*]", 1, [1], ["[0]"]),
+    ("[*]", 1.2, [1.2], ["[0]"]),
+    ("[*]", True, [True], ["[0]"]),
+    ("[*]", False, [False], ["[0]"]),
+    ("[*]", "test", ["test"], ["[0]"]),
+    ("[*]", None, [], []),
     ("[0:]", 1, [1], ["[0]"]),
     ("[*]", {"foo": 1}, [{"foo": 1}], ["[0]"]),
     ("[*].foo", {"foo": 1}, [1], ["[0].foo"]),
@@ -266,6 +443,11 @@ find_test_cases = (
     # --------
     #
     ("A.'a.c'", {"A": {"a.c": "d"}}, ["d"], ["A.'a.c'"]),
+    #
+    # Numeric keys
+    # --------
+    #
+    ("1", {"1": "foo"}, ["foo"], ["'1'"]),
 )
 
 
@@ -294,7 +476,7 @@ find_test_cases_with_auto_id = (
     ("foo.id", {"foo": "baz"}, ["foo"]),
     ("foo.id", {"foo": {"id": "baz"}}, ["baz"]),
     ("foo,baz.id", {"foo": 1, "baz": 2}, ["foo", "baz"]),
-    ("*.id", {"foo": {"id": 1}, "baz": 2}, {"1", "baz"}),
+    ("*.id", {"foo": {"id": 1}, "baz": 2}, {"'1'", "baz"}),
     #
     # Roots
     # -----
@@ -358,9 +540,9 @@ def test_find_full_paths_auto_id(auto_id_field, parse):
 @pytest.mark.parametrize(
     "string, target",
     (
-        ("m.[1].id", ["1.m.a2id"]),
-        ("m.[1].$.b.id", ["1.bid"]),
-        ("m.[0].id", ["1.m.[0]"]),
+        ("m.[1].id", ["'1'.m.a2id"]),
+        ("m.[1].$.b.id", ["'1'.bid"]),
+        ("m.[0].id", ["'1'.m.[0]"]),
     ),
 )
 @parsers
@@ -377,3 +559,31 @@ def test_nested_index_auto_id(auto_id_field, parse, string, target):
 def test_invalid_hyphenation_in_key():
     with pytest.raises(JsonPathLexerError):
         base_parse("foo.-baz")
+
+
+def test_index_hashable():
+    idx = Index(0)
+    assert hash(idx) == hash((0,))
+    assert {idx: "value"}[idx] == "value"
+
+
+def test_index_multi_indices_hashable():
+    idx = Index(0, 1, 2)
+    assert hash(idx) == hash((0, 1, 2))
+    assert {idx: "value"}[idx] == "value"
+
+
+@pytest.mark.parametrize(
+    "path, data, expected_values",
+    (
+        ("[-1]", [], []),
+        ("[-1]", [42], [42]),
+        ("[-2]", [42], []),
+    ),
+)
+@parsers
+def test_find_or_create_negative_index(parse, path, data, expected_values):
+    original = copy.deepcopy(data)
+    results = parse(path).find_or_create(data)
+    assert_value_equality(results, expected_values)
+    assert data == original
