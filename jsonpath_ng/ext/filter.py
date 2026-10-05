@@ -94,18 +94,18 @@ class Expression(JSONPath):
         self.value = value
 
     def find(self, datum):
-        datum = self.target.find(DatumInContext.wrap(datum))
+        wrapped_datum = DatumInContext.wrap(datum)
+        found = self.target.find(wrapped_datum)
 
         if self.op == "!":
-            # Negated relative query existence test
-            return not datum
-        if not datum:
+            return [] if found else [wrapped_datum]
+        if not found:
             return []
         if self.op is None:
-            return datum
+            return found
 
-        found = []
-        for data in datum:
+        result = []
+        for data in found:
             value = data.value
             if type(self.value) is int and isinstance(value, str):
                 try:
@@ -114,9 +114,9 @@ class Expression(JSONPath):
                     continue
 
             if OPERATOR_MAP[self.op](value, self.value):
-                found.append(data)
+                result.append(data)
 
-        return found
+        return result
 
     def __eq__(self, other):
         return (isinstance(other, Expression) and
