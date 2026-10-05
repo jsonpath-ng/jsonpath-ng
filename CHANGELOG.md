@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fix extended parser handling of field names that start with `true` or `false`.
 - Stop serializing `Child` paths with surrounding parentheses. (#215)
 - Avoid mutating dictionaries while evaluating extended filter expressions.
+- `str()` of an `Index` with comma-separated indices (e.g. `[0,1]`) no longer raises `TypeError`.
 - Fix broken `Slice` serialization behavior.
 
   Previously, a slice like `[0:]` would serialize to `[]`,

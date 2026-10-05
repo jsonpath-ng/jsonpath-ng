@@ -784,7 +784,7 @@ class Index(JSONPath):
         return isinstance(other, Index) and sorted(self.indices) == sorted(other.indices)
 
     def __str__(self):
-        return '[%i]' % self.indices
+        return '[%s]' % ','.join(str(index) for index in self.indices)
 
     def __repr__(self):
         return '%s(indices=%r)' % (self.__class__.__name__, self.indices)
