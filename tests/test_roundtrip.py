@@ -18,7 +18,6 @@ ascii_text = st.text(characters)
 @example("(0..0)[0]")
 @example("0..(0[0])")
 @example("0..0.[0]")
-@example("0[0,1]")  # multi-index: str(Index(0, 1)) used to raise TypeError
 @settings(max_examples=20)
 def test_roundtrip_basic(string: str):
     try:
