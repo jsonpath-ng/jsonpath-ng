@@ -241,12 +241,14 @@ To use the extensions below you must import from `jsonpath_ng.ext`.
 |              | - ``$.objects[?(@.some_field = "foobar")]``      |
 |              | - ``$.objects[?(@.some_field =~ "foobar")]``     |
 |              | - ``$.objects[?(@.some_field > 5 & other < 2)]`` |
+|              | - ``$.objects[?!@.some_field]``                  |
 |              |                                                  |
 |              | Supported operators:                             |
 |              |                                                  |
 |              | - Equality: ``==``, ``=``, ``!=``                |
 |              | - Comparison: ``>``, ``>=``, ``<``, ``<=``       |
 |              | - Regex match: ``=~``                            |
+|              | - Existence negation: ``!``                      |
 |              |                                                  |
 |              | Combine multiple criteria with ``&``.            |
 |              |                                                  |
