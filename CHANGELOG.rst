@@ -1,10 +1,17 @@
-All notable changes to this project will be documented in this file.
-Past changes are listed in `History.md <History.md>`__.
+..
+    THIS FILE IS MANAGED BY SCRIV.
+    DO NOT MANUALLY ADD CONTENT TO THIS FILE.
 
-The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`__.
+CHANGELOG
+#########
 
-Unreleased
-==========
+
+    Unreleased changes can be found in
+    `the changelog.d/ directory <https://github.com/jsonpath-ng/jsonpath-ng/tree/HEAD/changelog.d>`_.
+
+..  scriv-insert-here
+
+.. _changelog-1.9.1:
 
 1.9.1 - 2026-10-06
 ==================
@@ -15,6 +22,8 @@ Fixed
 - Add ``requires-python`` to the project metadata in ``pyproject.toml``. (#266)
 
   This ensures the package can only be installed on supported Python versions.
+
+.. _changelog-1.9.0:
 
 1.9.0 - 2026-10-05 [YANKED]
 ===========================
@@ -70,6 +79,8 @@ Removed
 
 - Drop support for Python 3.10.
 
+.. _changelog-1.8.0:
+
 1.8.0 - 2026-02-24
 ==================
 
@@ -122,6 +133,8 @@ Removed
 
 - Python 3.8 and 3.9 no longer supported
 
+.. _changelog-1.7.0:
+
 1.7.0 - 2024-10-11
 ==================
 
@@ -138,6 +151,8 @@ Removed
 - Add Codespaces configuration
 - Add ``.editorconfig``
 - Fix a GitHub workflow schema issue
+
+.. _changelog-1.6.1:
 
 1.6.1 - 2024-01-11
 ==================
@@ -190,6 +205,8 @@ Removed
 - Add additional tests
 - Add ``keys`` keyword
 
+.. _changelog-1.6.0:
+
 1.6.0 - 2023-09-13
 ==================
 
@@ -218,6 +235,8 @@ Removed
 - chore(history): update
 - Update **init**.py
 
+.. _changelog-1.5.3:
+
 1.5.3 - 2021-07-05
 ==================
 
@@ -233,6 +252,8 @@ Removed
 - Tests
 - Allow callers to catch JSONPathErrors
 
+.. _changelog-1.5.2:
+
 1.5.2 - 2020-09-07
 ==================
 
@@ -243,11 +264,15 @@ Removed
 - feat: support regular expression for performing contains (=~) filtering
 - if datum.value is a dictionary, filter on the list of values
 
+.. _changelog-1.5.1:
+
 1.5.1 - 2020-03-09
 ==================
 
 - feat(version): bump
 - fix(setup): strip extension
+
+.. _changelog-1.5.0:
 
 1.5.0 - 2020-03-06
 ==================
@@ -293,6 +318,8 @@ Removed
 - feat(setup): increase version
 - Merge pull request #1 from kmmbvnr/patch-1
 - Fix github url on pypi
+
+.. _changelog-1.4.3:
 
 1.4.3 - 2017-08-24
 ==================

@@ -35,6 +35,7 @@ dev = [
     "hypothesis",
     "pytest",
     "pytest-randomly",
+    "scriv",
     "tox",
 ]
 
@@ -74,3 +75,30 @@ filterwarnings = [
 skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv'
 check-hidden = true
 ignore-words-list = 'nd'
+
+
+# scriv
+# -----
+
+[tool.scriv]
+version = "literal: pyproject.toml: project.version"
+categories = [
+    "Python support",
+    "Added",
+    "Fixed",
+    "Removed",
+    "Changed",
+    "Deprecated",
+    "Security",
+    "Documentation",
+    "Project administration",
+]
+entry_title_template = "{{ version }} - {{ date.strftime('%Y-%m-%d') }}"
+format = "rst"
+fragment_directory = "changelog.d"
+insert_marker = "scriv-insert-here"
+main_branches = [
+    "main",
+    "releases",
+]
+new_fragment_template = "file: fragment-template.rst.txt"
