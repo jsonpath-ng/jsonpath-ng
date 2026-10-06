@@ -1,0 +1,27 @@
+..
+
+    Select the correct category for the change you are making.
+
+    1.  Remove all lines before and after the chosen category,
+        including these instructions.
+
+    2.  Describe your change using active verbs in the present tense,
+        and use full sentences with correct punctuation.
+
+        For example, write "Support sprocket frobulation."
+
+        Don't write "Supports sprocket frobulation",
+        or "supports sprocket frobulation".
+
+    3.  If your change is associated with an issue on GitHub,
+        list the issue number in parentheses. For example:
+
+            Support sprocket frobulation. (#10, #20)
+
+    Thanks for contributing!
+
+{% for category in config.categories %}
+{{ category }}
+{{ config.rst_header_chars[1] * (category|length) }}
+{% endfor %}
+*   CHANGEME
