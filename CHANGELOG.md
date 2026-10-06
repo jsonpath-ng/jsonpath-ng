@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Fixed
+
+- Add `requires-python` to the project metadata in `pyproject.toml`. (#266)
+
+  This ensures the package can only be installed on supported Python versions.
+
 ## 1.9.0 - 2026-10-05
 
 ### Added
