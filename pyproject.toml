@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jsonpath-ng"
-version = "1.9.0"
+version = "1.9.1"
 description="A final implementation of JSONPath for Python that aims to be standard compliant, including arithmetic and binary comparison operators and providing clear AST for metaprogramming."
 authors = [
     {name = "Tomas Aparicio", email = "tomas@aparicio.me"},
 ]
 license = "Apache-2.0"
 readme = "README.rst"
+requires-python = ">= 3.11"
 classifiers=[
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
