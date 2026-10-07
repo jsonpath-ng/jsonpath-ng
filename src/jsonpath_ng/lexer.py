@@ -1,5 +1,6 @@
 import sys
 import logging
+import warnings
 
 import jsonpath_ng._ply.lex
 
@@ -13,17 +14,29 @@ class JsonPathLexer:
     A Lexical analyzer for JsonPath.
     '''
 
-    def __init__(self, debug=False):
-        self.debug = debug
-        if self.__doc__ is None:
-            raise JsonPathLexerError('Docstrings have been removed! By design of PLY, jsonpath-rw requires docstrings. You must not use PYTHONOPTIMIZE=2 or python -OO.')
+    # The pre-generated lexer table; see `assets/generate_ply_tables.py`.
+    _ply_table_module = "jsonpath_ng._ply_tables.lexer_table"
+
+    def __init__(self, debug=None):
+        if debug is not None:
+            msg = (
+                "The `debug` parameter is deprecated. "
+                "It no longer has any effect and will be removed in version 2.0.0."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
 
     def tokenize(self, string):
         '''
         Maps a string to an iterator over tokens. In other words: [char] -> [token]
         '''
 
-        new_lexer = jsonpath_ng._ply.lex.lex(module=self, debug=self.debug, errorlog=logger)
+        new_lexer = jsonpath_ng._ply.lex.lex(
+            module=self,
+            debug=False,
+            optimize=True,
+            lextab=self._ply_table_module,
+            errorlog=logger,
+        )
         new_lexer.latest_newline = 0
         new_lexer.string_value = None
         new_lexer.input(string)
@@ -171,6 +184,6 @@ class JsonPathLexer:
 
 if __name__ == '__main__':
     logging.basicConfig()
-    lexer = JsonPathLexer(debug=True)
+    lexer = JsonPathLexer()
     for token in lexer.tokenize(sys.stdin.read()):
         print('%-20s%s' % (token.value, token.type))

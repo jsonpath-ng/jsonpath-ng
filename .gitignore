@@ -11,7 +11,6 @@ __pycache__/
 /README.txt
 /dist
 *.egg-info
-parser.out
 .cache
 /.codespeed/
 .coverage

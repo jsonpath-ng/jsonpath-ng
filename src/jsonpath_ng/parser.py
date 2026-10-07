@@ -1,6 +1,6 @@
 import logging
 import sys
-import os.path
+import warnings
 
 import jsonpath_ng._ply.yacc
 
@@ -22,36 +22,29 @@ class JsonPathParser:
 
     tokens = JsonPathLexer.tokens
 
-    def __init__(self, debug=False, lexer_class=None):
-        if self.__doc__ is None:
-            raise JsonPathParserError(
-                'Docstrings have been removed! By design of PLY, '
-                'jsonpath-rw requires docstrings. You must not use '
-                'PYTHONOPTIMIZE=2 or python -OO.'
-            )
+    # The pre-generated LALR table; see `assets/generate_ply_tables.py`.
+    _ply_table_module = "jsonpath_ng._ply_tables.parser_table"
 
-        self.debug = debug
+    def __init__(self, debug=None, lexer_class=None):
+        if debug is not None:
+            msg = (
+                "The `debug` parameter is deprecated. "
+                "It no longer has any effect and will be removed in v2.0.0."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+
         self.lexer_class = lexer_class or JsonPathLexer # Crufty but works around statefulness in PLY
 
-        # Since PLY has some crufty aspects and dumps files, we try to keep them local
-        # However, we need to derive the name of the output Python file :-/
-        output_directory = os.path.dirname(__file__)
-        try:
-            module_name = os.path.splitext(os.path.split(__file__)[1])[0]
-        except:
-            module_name = __name__
-
-        start_symbol = 'jsonpath'
-        parsing_table_module = '_'.join([module_name, start_symbol, 'parsetab'])
-
-        # Generate the parse table
-        self.parser = jsonpath_ng._ply.yacc.yacc(module=self,
-                                    debug=self.debug,
-                                    tabmodule = parsing_table_module,
-                                    outputdir = output_directory,
-                                    write_tables=0,
-                                    start = start_symbol,
-                                    errorlog = logger)
+        # Load the pre-generated parse table. Nothing is generated or written.
+        self.parser = jsonpath_ng._ply.yacc.yacc(
+            module=self,
+            debug=False,
+            tabmodule=self._ply_table_module,
+            optimize=True,
+            write_tables=False,
+            start="jsonpath",
+            errorlog=logger,
+        )
 
     def parse(self, string, lexer = None) -> JSONPath:
         lexer = lexer or self.lexer_class()
@@ -205,5 +198,5 @@ class IteratorToTokenStream:
 
 if __name__ == '__main__':
     logging.basicConfig()
-    parser = JsonPathParser(debug=True)
+    parser = JsonPathParser()
     print(parser.parse(sys.stdin.read()))

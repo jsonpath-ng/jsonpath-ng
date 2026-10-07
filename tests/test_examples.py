@@ -74,7 +74,7 @@ def test_goessner_examples(string, parsed):
 
     .. _examples: https://goessner.net/articles/JsonPath/index.html#e3
     """
-    assert parse(string, debug=True) == parsed
+    assert parse(string) == parsed
 
 
 def test_attribute_and_dict_syntax():
