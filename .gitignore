@@ -13,6 +13,7 @@ __pycache__/
 *.egg-info
 parser.out
 .cache
+/.codespeed/
 .coverage
 .coverage.*
 .tox/
