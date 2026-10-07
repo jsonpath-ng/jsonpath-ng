@@ -60,6 +60,7 @@ sqlite_cache = true
 ignore_errors = true
 module = [
     "jsonpath_ng._ply.*",
+    "jsonpath_ng._ply_tables.*",
 ]
 
 

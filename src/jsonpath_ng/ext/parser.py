@@ -23,6 +23,7 @@ from . import string as _string
 
 class ExtendedJsonPathLexer(lexer.JsonPathLexer):
     """Custom LALR-lexer for JsonPath"""
+    _ply_table_module = "jsonpath_ng._ply_tables.ext_lexer_table"
     literals = lexer.JsonPathLexer.literals + ['?', '@', '+', '*', '/', '-', '!']
     tokens = (['BOOL'] +
               parser.JsonPathLexer.tokens +
@@ -57,8 +58,9 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
     """Custom LALR-parser for JsonPath"""
 
     tokens = ExtendedJsonPathLexer.tokens
+    _ply_table_module = "jsonpath_ng._ply_tables.ext_parser_table"
 
-    def __init__(self, debug=False, lexer_class=None):
+    def __init__(self, debug=None, lexer_class=None):
         lexer_class = lexer_class or ExtendedJsonPathLexer
         super(ExtendedJsonPathParser, self).__init__(debug, lexer_class)
 
@@ -178,5 +180,5 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
 # XXX This is here for backward compatibility
 ExtentedJsonPathParser = ExtendedJsonPathParser
 
-def parse(path, debug=False):
+def parse(path, debug=None):
     return ExtendedJsonPathParser(debug=debug).parse(path)

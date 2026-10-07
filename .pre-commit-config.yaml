@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: generate-ply-tables
+        name: Generate the PLY lexer and parser tables
+        description: Regenerate the tracked PLY tables whenever the lexer or parser changes.
+        language: system
+        entry: python assets/generate_ply_tables.py
+        pass_filenames: false
+        files: ^(src/jsonpath_ng/(lexer|parser|ext/parser)\.py|assets/generate_ply_tables\.py)$
