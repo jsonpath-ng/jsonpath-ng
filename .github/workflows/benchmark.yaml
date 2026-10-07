@@ -1,0 +1,55 @@
+name: '⏱️ Benchmark'
+
+on:
+  workflow_dispatch: null
+  pull_request: null
+  push:
+    branches:
+      - 'main'
+
+# Permissions are overridden at the job level.
+permissions: {}
+
+# Group run concurrency by workflow and branch.
+# PR branch updates cancel and replace any existing run.
+# Updates to the 'main' branch cause runs to queue.
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: ${{ github.ref != 'main'  }}
+
+env:
+  PYTHON_VERSION: '3.14'
+  UV_VERSION: '0.12.13'
+
+jobs:
+  benchmark:
+    # Never run in forks.
+    if: "${{ github.repository == 'jsonpath-ng/jsonpath-ng' }}"
+
+    runs-on: 'ubuntu-24.04'
+
+    permissions:
+      contents: 'read' # Required for actions/checkout
+      id-token: 'write' # Required for OIDC authentication with CodSpeed
+
+    steps:
+      - name: 'Checkout repo'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: 'Setup Python'
+        uses: 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97' # v7.0.0
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: 'Setup uv'
+        uses: 'astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4' # v10.1.0
+        with:
+          version: "${{ env.UV_VERSION }}"
+
+      - name: 'Run benchmarks'
+        uses: 'CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea' # v5.2.1
+        with:
+          mode: 'simulation'
+          run: 'uv run --with pytest-codspeed pytest --codspeed'
