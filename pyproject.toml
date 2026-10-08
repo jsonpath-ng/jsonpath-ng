@@ -84,13 +84,17 @@ module = [
 # pytest
 # ------
 
-[tool.pytest.ini_options]
+[tool.pytest]
+strict = true
+testpaths = [
+    "tests",
+]
+addopts = [
+    "--color=yes",
+]
 filterwarnings = [
     # Escalate warnings to errors.
     "error",
-
-    # The ply package doesn't close its debug log file. Ignore this warning.
-    "ignore::ResourceWarning",
 ]
 
 
