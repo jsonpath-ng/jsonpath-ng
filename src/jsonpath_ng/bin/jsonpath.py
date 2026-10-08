@@ -28,7 +28,8 @@ def main(*argv):
         description="Search JSON files (or stdin) according to a JSONPath expression.",
         formatter_class=argparse.RawTextHelpFormatter,
         epilog="""
-        Quick JSONPath reference (see more at https://github.com/jsonpath-ng/jsonpath-ng/)
+        Quick JSONPath reference
+        (see more at https://github.com/jsonpath-ng/jsonpath-ng/)
 
         atomics:
             $              - root object

@@ -111,7 +111,7 @@ class Keys(JSONPath):
         datum = DatumInContext.wrap(datum)
         try:
             value = list(datum.value.keys())
-        except Exception as e:
+        except Exception:
             return []
         else:
             return [
@@ -138,7 +138,7 @@ class Path(JSONPath):
         datum = DatumInContext.wrap(datum)
         try:
             value = str(datum.path)
-        except Exception as e:
+        except Exception:
             return []
         else:
             return [DatumInContext(value, context=datum, path=Path())]

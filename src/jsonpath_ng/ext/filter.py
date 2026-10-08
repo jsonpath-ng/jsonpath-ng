@@ -72,8 +72,8 @@ class Filter(JSONPath):
                     list(filter(lambda x: x.find(item), self.expressions))
                 )
                 if shouldUpdate:
-                    if hasattr(val, "__call__"):
-                        val.__call__(data[index], data, index)
+                    if callable(val):
+                        val(data[index], data, index)
                     else:
                         data[index] = val
         return data

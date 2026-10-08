@@ -53,7 +53,8 @@ class JsonPathLexer:
     # ============== PLY Lexer specification ==================
     #
     # This probably should be private but:
-    #   - the parser requires access to `tokens` (perhaps they should be defined in a third, shared dependency)
+    #   - the parser requires access to `tokens`
+    #     (perhaps they should be defined in a third, shared dependency)
     #   - things like `literals` might be a legitimate part of the public interface.
     #
     # Anyhow, it is pythonic to give some rope to hang oneself with :-)
@@ -118,9 +119,8 @@ class JsonPathLexer:
 
     def t_singlequote_error(self, t):
         raise JsonPathLexerError(
-            "Error on line {}, col {} while lexing singlequoted field: Unexpected character: {} ".format(
-                t.lexer.lineno, t.lexpos - t.lexer.latest_newline, t.value[0]
-            )
+            f"Error on line {t.lexer.lineno}, col {t.lexpos - t.lexer.latest_newline} "
+            f"while lexing singlequoted field: Unexpected character: {t.value[0]}"
         )
 
     # Double-quoted strings
@@ -150,9 +150,8 @@ class JsonPathLexer:
 
     def t_doublequote_error(self, t):
         raise JsonPathLexerError(
-            "Error on line {}, col {} while lexing doublequoted field: Unexpected character: {} ".format(
-                t.lexer.lineno, t.lexpos - t.lexer.latest_newline, t.value[0]
-            )
+            f"Error on line {t.lexer.lineno}, col {t.lexpos - t.lexer.latest_newline} "
+            f"while lexing doublequoted field: Unexpected character: {t.value[0]}"
         )
 
     # Back-quoted "magic" operators
@@ -182,9 +181,8 @@ class JsonPathLexer:
 
     def t_backquote_error(self, t):
         raise JsonPathLexerError(
-            "Error on line {}, col {} while lexing backquoted operator: Unexpected character: {} ".format(
-                t.lexer.lineno, t.lexpos - t.lexer.latest_newline, t.value[0]
-            )
+            f"Error on line {t.lexer.lineno}, col {t.lexpos - t.lexer.latest_newline} "
+            f"while lexing backquoted operator: Unexpected character: {t.value[0]}"
         )
 
     # Counting lines, handling errors

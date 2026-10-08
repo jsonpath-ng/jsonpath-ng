@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import logging
 import re
-from itertools import *  # noqa
-from typing import List
-from typing import Optional
 
 from jsonpath_ng.exceptions import JSONPathError
 
@@ -28,9 +25,11 @@ class JSONPath:
 
     def find(self, data) -> list[DatumInContext]:
         """
-        All `JSONPath` types support `find()`, which returns an iterable of `DatumInContext`s.
-        They keep track of the path followed to the current location, so if the calling code
-        has some opinion about that, it can be passed in here as a starting point.
+        All `JSONPath` types support `find()`,
+        which returns an iterable of `DatumInContext`s.
+        They keep track of the path followed to the current location,
+        so if the calling code has some opinion about that,
+        it can be passed in here as a starting point.
         """
         raise NotImplementedError()
 
@@ -493,7 +492,8 @@ class Descendants(JSONPath):
         def match_recursively(datum):
             right_matches = self.right.find(datum)
 
-            # Manually do the * or [*] to avoid coercion and recurse just the right-hand pattern
+            # Manually do the * or [*] to avoid coercion
+            # and recurse just the right-hand pattern
             if isinstance(datum.value, list):
                 recursive_matches = [
                     submatch
@@ -542,7 +542,8 @@ class Descendants(JSONPath):
 
             self.right.update(data, val)
 
-            # Manually do the * or [*] to avoid coercion and recurse just the right-hand pattern
+            # Manually do the * or [*] to avoid coercion
+            # and recurse just the right-hand pattern
             if isinstance(data, list):
                 for i in range(0, len(data)):
                     update_recursively(data[i])
@@ -569,7 +570,8 @@ class Descendants(JSONPath):
 
             self.right.filter(fn, data)
 
-            # Manually do the * or [*] to avoid coercion and recurse just the right-hand pattern
+            # Manually do the * or [*] to avoid coercion
+            # and recurse just the right-hand pattern
             if isinstance(data, list):
                 for i in range(0, len(data)):
                     filter_recursively(data[i])
@@ -742,7 +744,7 @@ class Fields(JSONPath):
                 if create and field not in data:
                     data[field] = {}
                 if type(data) is not bool and field in data:
-                    if hasattr(val, "__call__"):
+                    if callable(val):
                         val_result = val(data[field], data, field)
                         if val_result is not None:
                             data[field] = val_result
@@ -786,8 +788,10 @@ class Index(JSONPath):
     JSONPath that matches indices of the current datum, or none if not large enough.
     Concrete syntax is brackets.
 
-    WARNING: If the datum is None or not long enough, it will not crash but will not match anything.
-    NOTE: For the concrete syntax of `[*]`, the abstract syntax is a Slice() with no parameters (equiv to `[:]`
+    WARNING: If the datum is None or not long enough,
+    it will not crash but will not match anything.
+    NOTE: For the concrete syntax of `[*]`,
+    the abstract syntax is a Slice() with no parameters (equiv to `[:]`).
     """
 
     def __init__(self, *indices) -> None:
@@ -831,9 +835,9 @@ class Index(JSONPath):
             if data == {}:
                 data = _create_list_key(data)
             self._pad_value(data)
-        if hasattr(val, "__call__"):
+        if callable(val):
             for index in self.indices:
-                val_result = val.__call__(data[index], data, index)
+                val_result = val(data[index], data, index)
                 if val_result is not None:
                     data[index] = val_result
         else:
@@ -841,7 +845,9 @@ class Index(JSONPath):
                 if len(data) > index:
                     try:
                         if isinstance(val, list):
-                            # allows somelist[5,1,2] = [some_value, another_value, third_value]
+                            # allows somelist[5,1,2] = [
+                            #   some_value, another_value, third_value
+                            # ]
                             data[index] = val.pop(0)
                         else:
                             data[index] = val

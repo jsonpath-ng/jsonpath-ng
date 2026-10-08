@@ -4,7 +4,19 @@ import warnings
 
 import jsonpath_ng._ply.yacc
 from jsonpath_ng.exceptions import JsonPathParserError
-from jsonpath_ng.jsonpath import *
+from jsonpath_ng.jsonpath import Child
+from jsonpath_ng.jsonpath import Descendants
+from jsonpath_ng.jsonpath import Fields
+from jsonpath_ng.jsonpath import Index
+from jsonpath_ng.jsonpath import Intersect
+from jsonpath_ng.jsonpath import JSONPath
+from jsonpath_ng.jsonpath import Parent
+from jsonpath_ng.jsonpath import Root
+from jsonpath_ng.jsonpath import Slice
+from jsonpath_ng.jsonpath import This
+from jsonpath_ng.jsonpath import Union
+from jsonpath_ng.jsonpath import Where
+from jsonpath_ng.jsonpath import WhereNot
 from jsonpath_ng.lexer import JsonPathLexer
 
 logger = logging.getLogger(__name__)
