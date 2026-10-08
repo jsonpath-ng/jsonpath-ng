@@ -10,6 +10,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import warnings
 
 from .. import Child
 from .. import Fields
@@ -186,9 +187,17 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
     )
 
 
-# XXX This is here for backward compatibility
-ExtentedJsonPathParser = ExtendedJsonPathParser
-
-
 def parse(path, debug=None):
     return ExtendedJsonPathParser(debug=debug).parse(path)
+
+
+def __getattr__(name: str) -> object:
+    if name == "ExtentedJsonPathParser":
+        msg = (
+            "ExtentedJsonPathParser is a deprecated name. "
+            "It will be removed in version 2.0.0. "
+            "Please use 'ExtendedJsonPathParser' instead."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        return ExtendedJsonPathParser
+    raise AttributeError(f"Module {__name__!r} has no attribute {name}")
