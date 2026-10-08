@@ -39,6 +39,10 @@ Before opening a PR, please follow these guidelines when creating commits:
 
     For example, write "Closes #123" or "Fixes #123".
 
+*   Run the pre-commit hooks.
+
+    ``prek run -a``
+
 
 AI policy
 =========
@@ -63,6 +67,13 @@ Install the project in editable mode with development tools:
 ..  code-block::
 
     python -m pip install -e. --group=dev
+
+
+Install prek so that pre-commit hooks run on each commit:
+
+..  code-block::
+
+    prek install
 
 Before making changes, confirm that the test suite passes in your environment:
 

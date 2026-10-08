@@ -23,10 +23,8 @@ sys.path.insert(0, str(root / "src"))
 
 import jsonpath_ng._ply.lex as ply_lex  # noqa: E402
 import jsonpath_ng._ply.yacc as ply_yacc  # noqa: E402
-from jsonpath_ng.ext.parser import (  # noqa: E402
-    ExtendedJsonPathLexer,
-    ExtendedJsonPathParser,
-)
+from jsonpath_ng.ext.parser import ExtendedJsonPathLexer  # noqa: E402
+from jsonpath_ng.ext.parser import ExtendedJsonPathParser  # noqa: E402
 from jsonpath_ng.lexer import JsonPathLexer  # noqa: E402
 from jsonpath_ng.parser import JsonPathParser  # noqa: E402
 

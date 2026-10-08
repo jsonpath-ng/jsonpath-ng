@@ -1,6 +1,7 @@
 import pytest
 
-from jsonpath_ng.lexer import JsonPathLexer, JsonPathLexerError
+from jsonpath_ng.lexer import JsonPathLexer
+from jsonpath_ng.lexer import JsonPathLexerError
 
 token_test_cases = (
     ("$", (("$", "$"),)),

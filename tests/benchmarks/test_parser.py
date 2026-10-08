@@ -1,7 +1,6 @@
-import jsonpath_ng.parser
-
 import pytest
 
+import jsonpath_ng.parser
 
 benchmark_group = pytest.mark.benchmark(group="parser")
 
