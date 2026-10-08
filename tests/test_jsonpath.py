@@ -1,15 +1,21 @@
 import copy
 from collections import UserDict
+from collections.abc import Callable
 
 import pytest
-from typing import Callable
+
+from jsonpath_ng import JSONPath
 from jsonpath_ng.ext.parser import parse as ext_parse
-from jsonpath_ng.jsonpath import DatumInContext, Fields, Index, Root, This
+from jsonpath_ng.jsonpath import DatumInContext
+from jsonpath_ng.jsonpath import Fields
+from jsonpath_ng.jsonpath import Index
+from jsonpath_ng.jsonpath import Root
+from jsonpath_ng.jsonpath import This
 from jsonpath_ng.lexer import JsonPathLexerError
 from jsonpath_ng.parser import parse as base_parse
-from jsonpath_ng import JSONPath
 
-from .helpers import assert_full_path_equality, assert_value_equality
+from .helpers import assert_full_path_equality
+from .helpers import assert_value_equality
 
 
 @pytest.mark.parametrize(
@@ -138,10 +144,10 @@ update_test_cases = (
     # --------
     #
     (
-        '(* wherenot flag) .. bar',
-        {'foo': {'bar': 1, 'flag': 1}, 'baz': {'bar': 2}},
+        "(* wherenot flag) .. bar",
+        {"foo": {"bar": 1, "flag": 1}, "baz": {"bar": 2}},
         4,
-        {'foo': {'bar': 1, 'flag': 1}, 'baz': {'bar': 4}},
+        {"foo": {"bar": 1, "flag": 1}, "baz": {"bar": 4}},
     ),
     #
     # Lambdas
@@ -149,9 +155,9 @@ update_test_cases = (
     #
     (
         "foo[*].baz",
-        {'foo': [{'baz': 1}, {'baz': 2}]},
+        {"foo": [{"baz": 1}, {"baz": 2}]},
         lambda x, y, z: x + 1,
-        {'foo': [{'baz': 2}, {'baz': 3}]}
+        {"foo": [{"baz": 2}, {"baz": 3}]},
     ),
     #
     # Update with Boolean in data
@@ -159,9 +165,9 @@ update_test_cases = (
     #
     (
         "$.*.number",
-        {'foo': ['abc', 'def'], 'bar': {'number': 123456}, 'boolean': True},
-        '98765',
-        {'foo': ['abc', 'def'], 'bar': {'number': '98765'}, 'boolean': True},
+        {"foo": ["abc", "def"], "bar": {"number": 123456}, "boolean": True},
+        "98765",
+        {"foo": ["abc", "def"], "bar": {"number": "98765"}, "boolean": True},
     ),
 )
 
@@ -171,7 +177,13 @@ update_test_cases = (
     update_test_cases,
 )
 @parsers
-def test_update(parse: Callable[[str], JSONPath], expression: str, data, update_value, expected_value):
+def test_update(
+    parse: Callable[[str], JSONPath],
+    expression: str,
+    data,
+    update_value,
+    expected_value,
+):
     data_copy = copy.deepcopy(data)
     update_value_copy = copy.deepcopy(update_value)
     result = parse(expression).update(data_copy, update_value_copy)
@@ -187,7 +199,9 @@ def test_update(parse: Callable[[str], JSONPath], expression: str, data, update_
             datum.value = update_value_copy2[i]
         else:
             datum.value = update_value_copy2
-        if isinstance(datum.full_path, (Root, This)): # when the type of `data` is str, int, float etc.
+        if isinstance(
+            datum.full_path, (Root, This)
+        ):  # when the type of `data` is str, int, float etc.
             data_copy2 = datum.value
     assert data_copy2 == expected_value
 
@@ -220,7 +234,7 @@ def test_field_update_in_heterogeneous_data(parse):
 @parsers
 def test_field_update_in_duck_typed_mapping(parse):
     class MappingLike:
-        def __init__(self):
+        def __init__(self) -> None:
             self.data = {"c": 1}
 
         def get(self, key, default=None):
@@ -248,19 +262,19 @@ def test_update_with_inplace_callback(parse: Callable[[str], JSONPath]):
         # intentionally returns None
 
     data = {
-        'Data_cat': {
-            'data_entry': [
-                {'value': 0, 'UPPERCASE': 'UPPERCASE_A'},
-                {'value': 2, 'UPPERCASE': 'UPPERCASE_B'},
+        "Data_cat": {
+            "data_entry": [
+                {"value": 0, "UPPERCASE": "UPPERCASE_A"},
+                {"value": 2, "UPPERCASE": "UPPERCASE_B"},
             ]
         }
     }
-    parse('$..UPPERCASE').update(data, lowercase_inplace)
+    parse("$..UPPERCASE").update(data, lowercase_inplace)
     assert data == {
-        'Data_cat': {
-            'data_entry': [
-                {'value': 0, 'UPPERCASE': 'uppercase_a'},
-                {'value': 2, 'UPPERCASE': 'uppercase_b'},
+        "Data_cat": {
+            "data_entry": [
+                {"value": 0, "UPPERCASE": "uppercase_a"},
+                {"value": 2, "UPPERCASE": "uppercase_b"},
             ]
         }
     }
@@ -274,19 +288,19 @@ def test_update_with_returning_callback(parse: Callable[[str], JSONPath]):
         return orig.lower()
 
     data = {
-        'Data_cat': {
-            'data_entry': [
-                {'value': 0, 'UPPERCASE': 'UPPERCASE_A'},
-                {'value': 2, 'UPPERCASE': 'UPPERCASE_B'},
+        "Data_cat": {
+            "data_entry": [
+                {"value": 0, "UPPERCASE": "UPPERCASE_A"},
+                {"value": 2, "UPPERCASE": "UPPERCASE_B"},
             ]
         }
     }
-    parse('$..UPPERCASE').update(data, lowercase_return)
+    parse("$..UPPERCASE").update(data, lowercase_return)
     assert data == {
-        'Data_cat': {
-            'data_entry': [
-                {'value': 0, 'UPPERCASE': 'uppercase_a'},
-                {'value': 2, 'UPPERCASE': 'uppercase_b'},
+        "Data_cat": {
+            "data_entry": [
+                {"value": 0, "UPPERCASE": "uppercase_a"},
+                {"value": 2, "UPPERCASE": "uppercase_b"},
             ]
         }
     }
@@ -294,13 +308,28 @@ def test_update_with_returning_callback(parse: Callable[[str], JSONPath]):
 
 filter_test_cases = (
     # Docs examples
-    ("foo[*].baz", {'foo': [{'baz': 1}, {'baz': 2}]}, lambda d: True, {'foo': [{}, {}]}),
-    ("foo[*].baz", {'foo': [{'baz': 1}, {'baz': 2}]}, lambda d: d == 2, {'foo': [{'baz': 1}, {}]}),
+    (
+        "foo[*].baz",
+        {"foo": [{"baz": 1}, {"baz": 2}]},
+        lambda d: True,
+        {"foo": [{}, {}]},
+    ),
+    (
+        "foo[*].baz",
+        {"foo": [{"baz": 1}, {"baz": 2}]},
+        lambda d: d == 2,
+        {"foo": [{"baz": 1}, {}]},
+    ),
     # Child paths only filter values with an in-range parent index.
     ("[-2].foo", [{"foo": 1}, {"foo": 2}], lambda d: True, [{}, {"foo": 2}]),
     ("[-3].foo", [{"foo": 1}, {"foo": 2}], lambda d: True, [{"foo": 1}, {"foo": 2}]),
     # Wildcard issue fix
-    ("*.baz", {"flag": False, "foo": {"bar": 1, "baz": 2}}, lambda d: True, {"flag": False, "foo": {"bar": 1}}),
+    (
+        "*.baz",
+        {"flag": False, "foo": {"bar": 1, "baz": 2}},
+        lambda d: True,
+        {"flag": False, "foo": {"bar": 1}},
+    ),
 )
 
 
@@ -309,7 +338,13 @@ filter_test_cases = (
     filter_test_cases,
 )
 @parsers
-def test_filter(parse: Callable[[str], JSONPath], expression: str, data, filter_function: Callable, expected_value):
+def test_filter(
+    parse: Callable[[str], JSONPath],
+    expression: str,
+    data,
+    filter_function: Callable,
+    expected_value,
+):
     data_copy = copy.deepcopy(data)
     parse(expression).filter(filter_function, data_copy)
     assert data_copy == expected_value

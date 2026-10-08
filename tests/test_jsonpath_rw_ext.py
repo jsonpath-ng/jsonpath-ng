@@ -12,7 +12,8 @@ import pytest
 
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parser
-from jsonpath_ng.ext.filter import Expression, Filter
+from jsonpath_ng.ext.filter import Expression
+from jsonpath_ng.ext.filter import Filter
 
 from .helpers import assert_value_equality
 
@@ -497,41 +498,19 @@ test_cases = (
     pytest.param(
         '$[?!@..["type"]]',
         [
-            {
-                "name": "foo",
-                "data": [{"value": "bar"}]
-            },
-            {
-                "name": "foo",
-                "data": [{"value": "bar", "type": "foo"}]
-            }
+            {"name": "foo", "data": [{"value": "bar"}]},
+            {"name": "foo", "data": [{"value": "bar", "type": "foo"}]},
         ],
-        [
-            {
-                "name": "foo",
-                "data": [{"value": "bar"}]
-            }
-        ],
-        id="negated_relative_query_existence"
+        [{"name": "foo", "data": [{"value": "bar"}]}],
+        id="negated_relative_query_existence",
     ),
     pytest.param(
-        '$[?!data[*].type]',
+        "$[?!data[*].type]",
         [
-            {
-                "name": "foo",
-                "data": [{"value": "bar"}]
-            },
-            {
-                "name": "foo",
-                "data": [{"value": "bar", "type": "foo"}]
-            }
+            {"name": "foo", "data": [{"value": "bar"}]},
+            {"name": "foo", "data": [{"value": "bar", "type": "foo"}]},
         ],
-        [
-            {
-                "name": "foo",
-                "data": [{"value": "bar"}]
-            }
-        ],
+        [{"name": "foo", "data": [{"value": "bar"}]}],
         id="negated_relative_query_existence_implicit_this",
     ),
     pytest.param(
@@ -659,10 +638,13 @@ def test_filter_stops_evaluating_after_first_failed_expression():
     assert calls == [("first", 1), ("first", 2), ("second", 2), ("first", 3)]
 
 
-@pytest.mark.parametrize("datum, expect_match", [
-    pytest.param({"bar": 1}, True,  id="field-absent-item-passes"),
-    pytest.param({"foo": 1}, False, id="field-present-item-excluded"),
-])
+@pytest.mark.parametrize(
+    "datum, expect_match",
+    [
+        pytest.param({"bar": 1}, True, id="field-absent-item-passes"),
+        pytest.param({"foo": 1}, False, id="field-present-item-excluded"),
+    ],
+)
 def test_negation_expression_find_returns_list(datum, expect_match):
     """
     Verify that negation returns a list.

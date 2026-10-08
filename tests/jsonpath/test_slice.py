@@ -3,7 +3,6 @@ import pytest
 import jsonpath_ng
 import jsonpath_ng.ext
 
-
 parsers = pytest.mark.parametrize(
     "parse",
     (jsonpath_ng.parse, jsonpath_ng.ext.parse),
@@ -30,7 +29,7 @@ parsers = pytest.mark.parametrize(
         pytest.param("[1::2]", 1, None, 2, id="start-and-step"),
         # All elements
         pytest.param("[1:2:3]", 1, 2, 3, id="all-elements"),
-    )
+    ),
 )
 @parsers
 def test_slice(parse, data, expected_start, expected_end, expected_step):

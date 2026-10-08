@@ -52,10 +52,7 @@ def test_tracked_tables_are_current():
 
 def test_no_orphaned_tables():
     expected = set(generate())
-    on_disk = {
-        path.name
-        for path in package_directory.rglob("_ply_tables/*_table.py")
-    }
+    on_disk = {path.name for path in package_directory.rglob("_ply_tables/*_table.py")}
 
     assert on_disk == expected
 

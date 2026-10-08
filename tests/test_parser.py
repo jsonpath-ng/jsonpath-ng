@@ -1,6 +1,12 @@
 import pytest
 
-from jsonpath_ng.jsonpath import Child, Descendants, Fields, Index, Slice, Where, WhereNot
+from jsonpath_ng.jsonpath import Child
+from jsonpath_ng.jsonpath import Descendants
+from jsonpath_ng.jsonpath import Fields
+from jsonpath_ng.jsonpath import Index
+from jsonpath_ng.jsonpath import Slice
+from jsonpath_ng.jsonpath import Where
+from jsonpath_ng.jsonpath import WhereNot
 from jsonpath_ng.lexer import JsonPathLexer
 from jsonpath_ng.parser import JsonPathParser
 

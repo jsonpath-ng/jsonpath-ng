@@ -2,7 +2,6 @@ import pytest
 
 import jsonpath_ng.ext
 
-
 parsers = pytest.mark.parametrize(
     "parse",
     (jsonpath_ng.parse, jsonpath_ng.ext.parse),

@@ -12,19 +12,20 @@
 # under the License.
 
 import operator
-from .. import JSONPath, DatumInContext
 
+from .. import DatumInContext
+from .. import JSONPath
 
 OPERATOR_MAP = {
-    '+': operator.add,
-    '-': operator.sub,
-    '*': operator.mul,
-    '/': operator.truediv,
+    "+": operator.add,
+    "-": operator.sub,
+    "*": operator.mul,
+    "/": operator.truediv,
 }
 
 
 class Operation(JSONPath):
-    def __init__(self, left, op, right):
+    def __init__(self, left, op, right) -> None:
         self.left = left
         self.op_symbol = op
         self.op = OPERATOR_MAP[op]
@@ -32,8 +33,7 @@ class Operation(JSONPath):
 
     def find(self, datum):
         result = []
-        if (isinstance(self.left, JSONPath)
-                and isinstance(self.right, JSONPath)):
+        if isinstance(self.left, JSONPath) and isinstance(self.right, JSONPath):
             left = self.left.find(datum)
             right = self.right.find(datum)
             if left and right and len(left) == len(right):
@@ -66,12 +66,12 @@ class Operation(JSONPath):
         return [DatumInContext.wrap(r) for r in result]
 
     def __repr__(self):
-        return '%s(%r%s%r)' % (self.__class__.__name__, self.left, self.op_symbol,
-                               self.right)
+        return "{}({!r}{}{!r})".format(
+            self.__class__.__name__, self.left, self.op_symbol, self.right
+        )
 
     def __str__(self):
-        return '%s %s %s' % (self.left, self.op_symbol, self.right)
-
+        return f"{self.left} {self.op_symbol} {self.right}"
 
     def __eq__(self, other):
         return (
