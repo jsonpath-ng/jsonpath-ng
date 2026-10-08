@@ -48,6 +48,15 @@ dev = [
 ]
 
 
+# codespell
+# ---------
+
+[tool.codespell]
+skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv'
+check-hidden = true
+ignore-words-list = 'nd'
+
+
 # flake8
 # ------
 
@@ -96,15 +105,6 @@ filterwarnings = [
     # Escalate warnings to errors.
     "error",
 ]
-
-
-# codespell
-# ---------
-
-[tool.codespell]
-skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv'
-check-hidden = true
-ignore-words-list = 'nd'
 
 
 # scriv
