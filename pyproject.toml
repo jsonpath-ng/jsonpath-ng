@@ -42,7 +42,7 @@ test = [
 ]
 dev = [
     { include-group = "test" },
-    "flake8",
+    "prek",
     "scriv",
     "tox",
 ]

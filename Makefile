@@ -19,7 +19,7 @@ install:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting code ...$(NO_COLOR)"
-	@flake8 --exclude=tests .
+	@prek run -a
 
 test: clean
 	@echo "$(OK_COLOR)==> Running tests ...$(NO_COLOR)"
