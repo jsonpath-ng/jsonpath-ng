@@ -1,24 +1,17 @@
-*.pyc
-*.pyo
-*~
+# Python compiled bytecode
 __pycache__/
 
-# Emacs
-\#(
-.\#*
-
 # Build and test artifacts
-/README.txt
-/dist
-*.egg-info
-.cache
-/.codespeed/
-.coverage
-.coverage.*
-.tox/
+/.codspeed/
+/.coverage*
+/.hypothesis/
+/.mypy_cache/
+/.pytest_cache/
+/.slyp_cache/
+/.tox/
 
-build
-/jsonpath_rw/VERSION
+/build/
+/dist/
+/htmlcov/
 
-.idea
-.vscode/
+*.egg-info/
