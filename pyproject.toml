@@ -57,6 +57,33 @@ check-hidden = true
 ignore-words-list = 'nd'
 
 
+# coverage
+# --------
+
+[tool.coverage.run]
+relative_files = true
+parallel = true
+branch = true
+source = [
+    "jsonpath_ng",
+    "tests",
+]
+omit = [
+    "*/jsonpath_ng/_ply/*",
+    "*/jsonpath_ng/_ply_tables/*",
+]
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "*/site-packages",
+]
+
+[tool.coverage.report]
+skip_covered = true
+fail_under = 82
+
+
 # flake8
 # ------
 
