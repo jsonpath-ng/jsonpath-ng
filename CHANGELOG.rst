@@ -5,11 +5,63 @@
 CHANGELOG
 #########
 
-
     Unreleased changes can be found in
     `the changelog.d/ directory <https://github.com/jsonpath-ng/jsonpath-ng/tree/HEAD/changelog.d>`_.
 
 ..  scriv-insert-here
+
+.. _changelog-1.10.0:
+
+1.10.0 - 2026-10-09
+===================
+
+Changed
+-------
+
+*   Use pre-generated PLY lex/parse tables. (#121)
+
+    Base parser instantiation is now over 20 times faster,
+    and extended parser instantiation is over 50 times faster.
+    In addition, actual parsing is over 50% faster.
+
+    This change also allows downstream projects
+    to run with Python optimizations enabled.
+
+Deprecated
+----------
+
+*   The ``debug`` parameter, given when instantiating lexers and parsers,
+    is now deprecated and has no effect.
+
+    The ``debug`` parameter will be removed in version 2.0.0.
+
+    To prepare for the change, remove the parameter from instantiation sites.
+
+*   The ``ExtentedJsonPathParser``, which was renamed in v1.8.0,
+    is now deprecated.
+
+    The ``ExtentedJsonPathParser`` name will be removed in version 2.0.0.
+
+    To prepare for the change, use the name ``ExtendedJsonPathParser``.
+
+*   The ``jsonpath_ng.__version__`` attribute is now deprecated.
+
+    The ``__version__`` attribute will be removed in version 2.0.0.
+
+    To prepare for the change, import ``importlib.metadata``
+    and use ``importlib.metadata.version("jsonpath-ng")``
+    to get the package version.
+
+Project administration
+----------------------
+
+*   Use Trusted Publishing in CI to publish to PyPI.
+*   Use CodSpeed to track runtime performance.
+*   Add a suite of pre-commit linters and fixers to enforce code standards.
+*   Use scriv to manage the changelog.
+
+    This eliminates trivial merge conflicts in PRs
+    caused by overlapping CHANGELOG updates.
 
 .. _changelog-1.9.1:
 
