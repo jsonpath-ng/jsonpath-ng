@@ -1,8 +1,15 @@
 import pytest
 
 from jsonpath_ng.ext import parse
-from jsonpath_ng.ext.filter import Expression, Filter
-from jsonpath_ng.jsonpath import Child, Descendants, Fields, Index, Root, Slice, This
+from jsonpath_ng.ext.filter import Expression
+from jsonpath_ng.ext.filter import Filter
+from jsonpath_ng.jsonpath import Child
+from jsonpath_ng.jsonpath import Descendants
+from jsonpath_ng.jsonpath import Fields
+from jsonpath_ng.jsonpath import Index
+from jsonpath_ng.jsonpath import Root
+from jsonpath_ng.jsonpath import Slice
+from jsonpath_ng.jsonpath import This
 
 
 @pytest.mark.parametrize(
@@ -37,13 +44,16 @@ from jsonpath_ng.jsonpath import Child, Descendants, Fields, Index, Root, Slice,
         ("$..book[-1:]", Child(Descendants(Root(), Fields("book")), Slice(start=-1))),
         #
         # The first two books
-        ("$..book[0,1]", Child(Descendants(Root(), Fields("book")), Index(0,1))),
+        ("$..book[0,1]", Child(Descendants(Root(), Fields("book")), Index(0, 1))),
         ("$..book[:2]", Child(Descendants(Root(), Fields("book")), Slice(end=2))),
         #
         # Categories and authors of all books
         (
-            "$..book[0][category,author]", 
-            Child(Child(Descendants(Root(), Fields('book')), Index(0)), Fields('category','author')),
+            "$..book[0][category,author]",
+            Child(
+                Child(Descendants(Root(), Fields("book")), Index(0)),
+                Fields("category", "author"),
+            ),
         ),
         #
         # Filter all books with an ISBN
@@ -74,7 +84,7 @@ def test_goessner_examples(string, parsed):
 
     .. _examples: https://goessner.net/articles/JsonPath/index.html#e3
     """
-    assert parse(string, debug=True) == parsed
+    assert parse(string) == parsed
 
 
 def test_attribute_and_dict_syntax():

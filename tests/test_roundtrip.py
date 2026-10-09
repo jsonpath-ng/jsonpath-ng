@@ -1,11 +1,16 @@
-from hypothesis import example, given, settings, strategies as st, assume
+from hypothesis import assume
+from hypothesis import example
+from hypothesis import given
+from hypothesis import settings
+from hypothesis import strategies as st
 
 import jsonpath_ng
 import jsonpath_ng.exceptions
 import jsonpath_ng.ext
 
-characters = st.characters(min_codepoint=0x20, max_codepoint=0x7e)  # space -> tilde
+characters = st.characters(min_codepoint=0x20, max_codepoint=0x7E)  # space -> tilde
 ascii_text = st.text(characters)
+
 
 @given(ascii_text)
 @example("10")

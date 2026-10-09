@@ -1,0 +1,84 @@
+default_language_version:
+  python: "python3.14"
+
+exclude: "src/jsonpath_ng/_ply.*"
+
+repos:
+  - repo: "meta"
+    hooks:
+      - id: "check-hooks-apply"
+      - id: "check-useless-excludes"
+
+  - repo: "https://github.com/pre-commit/pre-commit-hooks"
+    rev: "3e8a8703264a2f4a69428a0aa4dcb512790b2c8c"  # frozen: v6.0.0
+    hooks:
+      - id: "check-added-large-files"
+      - id: "check-merge-conflict"
+      - id: "check-yaml"
+      - id: "end-of-file-fixer"
+      - id: "mixed-line-ending"
+        args:
+          - "--fix=lf"
+      - id: "trailing-whitespace"
+
+  - repo: "https://github.com/asottile/pyupgrade"
+    rev: "75992aaa40730136014f34227e0135f63fc951b4"  # frozen: v3.21.2
+    hooks:
+      - id: "pyupgrade"
+        name: "Enforce Python 3.11+ idioms"
+        args: ["--py311-plus"]
+
+  - repo: "https://github.com/sirosen/slyp"
+    rev: "5eda35ad8f51f572b10523884f466df187335f74"  # frozen: 0.10.3
+    hooks:
+      - id: "slyp"
+
+  - repo: "https://github.com/psf/black-pre-commit-mirror"
+    rev: "4160603246a6b365d4a2af661c6d71b0a0f50478"  # frozen: 26.5.1
+    hooks:
+      - id: "black"
+
+  - repo: "https://github.com/pycqa/isort"
+    rev: "131f4adcd5582bfc53928ab0d740eceb8b506b6c"  # frozen: 9.0.1
+    hooks:
+      - id: "isort"
+
+  - repo: "https://github.com/pycqa/flake8"
+    rev: "c48217e1fc006c2dddd14df54e83b67da15de5cd"  # frozen: 7.3.0
+    hooks:
+      - id: "flake8"
+        additional_dependencies:
+          - "flake8-toml-config==1.0.0"
+          - "flake8-bugbear==26.9.30"
+
+  - repo: "https://github.com/editorconfig-checker/editorconfig-checker"
+    rev: "e98e4ec6d3bb64b4b62ec4f0ce6cacdfba12f9a0"  # frozen: v4.0.1
+    hooks:
+      - id: "editorconfig-checker"
+
+  - repo: "https://github.com/python-jsonschema/check-jsonschema"
+    rev: "12e63946db2c5cfcc9030fac21c3883ba88c6ed8"  # frozen: 0.38.0
+    hooks:
+      - id: "check-dependabot"
+
+  - repo: "https://github.com/rhysd/actionlint"
+    rev: "914e7df21a07ef503a81201c76d2b11c789d3fca"  # frozen: v1.7.12
+    hooks:
+      - id: "actionlint"
+        additional_dependencies:
+          - "github.com/wasilibs/go-shellcheck/cmd/shellcheck@4e7020840c303923eb1ab846fc446d77be892570"
+
+  - repo: "https://github.com/zizmorcore/zizmor-pre-commit"
+    rev: "fa412071e4f5d44d44f9e365f4676f9df92456a2"  # frozen: v1.30.1
+    hooks:
+      - id: "zizmor"
+
+  - repo: local
+    hooks:
+      - id: generate-ply-tables
+        name: Generate the PLY lexer and parser tables
+        description: Regenerate the tracked PLY tables whenever the lexer or parser changes.
+        language: system
+        entry: python assets/generate_ply_tables.py
+        pass_filenames: false
+        files: ^(src/jsonpath_ng/(lexer|parser|ext/parser)\.py|assets/generate_ply_tables\.py)$

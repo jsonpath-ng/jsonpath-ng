@@ -1,9 +1,0 @@
-[run]
-parallel = True
-branch = True
-source = jsonpath_ng, tests
-omit =
-    */jsonpath_ng/_ply/*.py
-
-[report]
-fail_under = 82

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jsonpath-ng"
-version = "1.9.1"
+version = "1.10.0"
 description="A final implementation of JSONPath for Python that aims to be standard compliant, including arithmetic and binary comparison operators and providing clear AST for metaprogramming."
 authors = [
     {name = "Tomas Aparicio", email = "tomas@aparicio.me"},
@@ -30,13 +30,75 @@ Source = "https://github.com/jsonpath-ng/jsonpath-ng"
 jsonpath_ng = "jsonpath_ng.bin.jsonpath:entry_point"
 
 [dependency-groups]
-dev = [
-    "flake8",
+coverage = [
+    "coverage[toml]",
+]
+test = [
+    { include-group = "coverage" },
     "hypothesis",
     "pytest",
+    "pytest-codspeed",
     "pytest-randomly",
+]
+dev = [
+    { include-group = "test" },
+    "prek",
+    "scriv",
     "tox",
 ]
+
+
+# codespell
+# ---------
+
+[tool.codespell]
+skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv'
+check-hidden = true
+ignore-words-list = 'nd'
+
+
+# coverage
+# --------
+
+[tool.coverage.run]
+relative_files = true
+parallel = true
+branch = true
+source = [
+    "jsonpath_ng",
+    "tests",
+]
+omit = [
+    "*/jsonpath_ng/_ply/*",
+    "*/jsonpath_ng/_ply_tables/*",
+]
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "*/site-packages",
+]
+
+[tool.coverage.report]
+skip_covered = true
+fail_under = 82
+
+
+# flake8
+# ------
+
+[tool.flake8]
+max-line-length = 80
+extend-select = ["B950"]
+extend-ignore = ["E203", "E501", "E701"]
+
+
+# isort
+# -----
+
+[tool.isort]
+profile = "black"
+force_single_line = true
 
 
 # mypy
@@ -51,26 +113,49 @@ sqlite_cache = true
 ignore_errors = true
 module = [
     "jsonpath_ng._ply.*",
+    "jsonpath_ng._ply_tables.*",
 ]
 
 
 # pytest
 # ------
 
-[tool.pytest.ini_options]
+[tool.pytest]
+strict = true
+testpaths = [
+    "tests",
+]
+addopts = [
+    "--color=yes",
+]
 filterwarnings = [
     # Escalate warnings to errors.
     "error",
-
-    # The ply package doesn't close its debug log file. Ignore this warning.
-    "ignore::ResourceWarning",
 ]
 
 
-# codespell
-# ---------
+# scriv
+# -----
 
-[tool.codespell]
-skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv'
-check-hidden = true
-ignore-words-list = 'nd'
+[tool.scriv]
+version = "literal: pyproject.toml: project.version"
+categories = [
+    "Python support",
+    "Added",
+    "Fixed",
+    "Removed",
+    "Changed",
+    "Deprecated",
+    "Security",
+    "Documentation",
+    "Project administration",
+]
+entry_title_template = "{{ version }} - {{ date.strftime('%Y-%m-%d') }}"
+format = "rst"
+fragment_directory = "changelog.d"
+insert_marker = "scriv-insert-here"
+main_branches = [
+    "main",
+    "releases",
+]
+new_fragment_template = "file: fragment-template.rst.txt"
