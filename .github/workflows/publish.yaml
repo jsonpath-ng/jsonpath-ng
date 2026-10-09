@@ -1,0 +1,95 @@
+name: '📦 Publish'
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+# Permissions are overwritten in each job.
+permissions: {}
+
+env:
+  PYTHON_VERSION: '3.14'
+  UV_VERSION: '0.12.13'
+  BUILD_VERSION: '1.6.1'
+  SETUPTOOLS_VERSION: '84.0.0'
+
+jobs:
+  build:
+    name: 'Build'
+    # Never run in forks.
+    if: "${{ github.repository == 'jsonpath-ng/jsonpath-ng' }}"
+
+    runs-on: 'ubuntu-24.04'
+
+    permissions:
+      contents: 'read'
+
+    outputs:
+      artifact-id: "${{ steps.upload-artifact.outputs.artifact-id }}"
+
+    steps:
+      - name: 'Checkout repo'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: 'Setup Python'
+        uses: 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97' # v7.0.0
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: 'Setup uv'
+        uses: 'astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4' # v10.1.0
+        with:
+          enable-cache: 'false'
+          version: "${{ env.UV_VERSION }}"
+
+      - name: 'Validate tag name'
+        shell: 'python'
+        run: |
+          import os
+          import pathlib
+          import tomllib
+
+          pyproject = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+          if f"v{pyproject['project']['version']}" != os.environ["GITHUB_REF_NAME"]:
+              raise SystemExit("The project version and git tag do not match!")
+
+      - name: 'Build packages'
+        run: |
+          uv run --no-project \
+            --with "build==${{ env.BUILD_VERSION }}" \
+            --with "setuptools==${{ env.SETUPTOOLS_VERSION }}" \
+            -m build --no-isolation -o dist/
+
+      - name: 'Upload artifact'
+        id: 'upload-artifact'
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' # v7.0.1
+        with:
+          name: "packages-${{ github.run_id }}-${{ github.run_attempt }}"
+          path: 'dist/'
+          if-no-files-found: 'error'
+          retention-days: '1'
+          overwrite: 'false'
+
+  publish:
+    needs:
+      - 'build'
+
+    name: 'Publish'
+    environment: 'PyPI'
+    runs-on: 'ubuntu-24.04'
+
+    permissions:
+      id-token: 'write' # Required for Trusted Publishing
+
+    steps:
+      - name: 'Download artifact'
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c' # v8.0.1
+        with:
+          artifact-ids: "${{ needs.build.outputs.artifact-id }}"
+          path: 'dist/'
+
+      - name: 'Publish to PyPI'
+        uses: 'pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33' # v1.14.2
