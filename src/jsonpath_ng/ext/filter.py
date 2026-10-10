@@ -45,9 +45,6 @@ class Filter(JSONPath):
         self.expressions = expressions
 
     def find(self, datum):
-        if not self.expressions:
-            return datum
-
         datum = DatumInContext.wrap(datum)
 
         if isinstance(datum.value, dict):
