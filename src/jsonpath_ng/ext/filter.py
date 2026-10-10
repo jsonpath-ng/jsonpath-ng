@@ -13,6 +13,7 @@
 
 import operator
 import re
+import warnings
 
 from .. import DatumInContext
 from .. import Fields
@@ -35,6 +36,12 @@ class Filter(JSONPath):
     """The JSONQuery filter"""
 
     def __init__(self, expressions) -> None:
+        if not expressions:
+            msg = (
+                "Creating a Filter with no expressions is deprecated. "
+                "It will raise an exception in version 2.0.0."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self.expressions = expressions
 
     def find(self, datum):
