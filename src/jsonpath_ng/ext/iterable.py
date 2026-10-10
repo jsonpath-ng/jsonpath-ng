@@ -53,15 +53,16 @@ class SortedThis(This):
 
     def find(self, datum):
         """Return sorted value of This if list or dict."""
+        datum = DatumInContext.wrap(datum)
         if isinstance(datum.value, dict) and self.expressions:
-            return datum
+            return [datum]
 
         if isinstance(datum.value, dict) or isinstance(datum.value, list):
             key = functools.cmp_to_key(self._compare) if self.expressions else None
             return [
                 DatumInContext.wrap([value for value in sorted(datum.value, key=key)])
             ]
-        return datum
+        return [datum]
 
     def __eq__(self, other):
         return isinstance(other, SortedThis) and self.expressions == other.expressions
