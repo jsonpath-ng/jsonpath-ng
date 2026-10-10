@@ -1,0 +1,5 @@
+Fixed
+-----
+
+*   Accept raw inputs in the ``sorted`` extension and return a list of matches
+    when sorting leaves a scalar or dictionary unchanged.
