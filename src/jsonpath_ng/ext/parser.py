@@ -199,11 +199,11 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
 
     def p_jsonpath_filter(self, p: _ExtProduction) -> None:
         "jsonpath : jsonpath '[' filter ']'"
-        p[0] = Child(p[1], p[3])
+        p[0] = Child(typing.cast(JSONPath, p[1]), typing.cast(JSONPath, p[3]))
 
     def p_jsonpath_descendant_filter(self, p: _ExtProduction) -> None:
         "jsonpath : jsonpath DOUBLEDOT '[' filter ']'"
-        p[0] = Descendants(p[1], p[4])
+        p[0] = Descendants(typing.cast(JSONPath, p[1]), typing.cast(JSONPath, p[4]))
 
     def p_sort(self, p: _ExtProduction) -> None:
         "sort : SORT_DIRECTION jsonpath"
@@ -222,7 +222,7 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
     def p_jsonpath_sort(self, p: _ExtProduction) -> None:
         "jsonpath : jsonpath '[' sorts ']'"
         sort = _iterable.SortedThis(p[3])
-        p[0] = Child(p[1], sort)
+        p[0] = Child(typing.cast(JSONPath, p[1]), sort)
 
     def p_jsonpath_this(self, p: _ExtProduction) -> None:
         "jsonpath : '@'"

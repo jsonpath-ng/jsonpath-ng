@@ -104,19 +104,21 @@ class JsonPathParser:
         | jsonpath '|' jsonpath
         | jsonpath '&' jsonpath"""
         op = p[2]
+        left = typing.cast(JSONPath, p[1])
+        right = typing.cast(JSONPath, p[3])
 
         if op == ".":
-            p[0] = Child(p[1], p[3])
+            p[0] = Child(left, right)
         elif op == "..":
-            p[0] = Descendants(p[1], p[3])
+            p[0] = Descendants(left, right)
         elif op == "where":
-            p[0] = Where(p[1], p[3])
+            p[0] = Where(left, right)
         elif op == "wherenot":
-            p[0] = WhereNot(p[1], p[3])
+            p[0] = WhereNot(left, right)
         elif op == "|":
-            p[0] = Union(p[1], p[3])
+            p[0] = Union(left, right)
         elif op == "&":
-            p[0] = Intersect(p[1], p[3])
+            p[0] = Intersect(left, right)
 
     def p_jsonpath_fields(self, p: _Production) -> None:
         "jsonpath : fields_or_any"
@@ -152,15 +154,15 @@ class JsonPathParser:
 
     def p_jsonpath_child_fieldbrackets(self, p: _Production) -> None:
         "jsonpath : jsonpath '[' fields ']'"
-        p[0] = Child(p[1], Fields(*typing.cast(list[str], p[3])))
+        p[0] = Child(typing.cast(JSONPath, p[1]), Fields(*typing.cast(list[str], p[3])))
 
     def p_jsonpath_child_idxbrackets(self, p: _Production) -> None:
         "jsonpath : jsonpath '[' idx ']'"
-        p[0] = Child(p[1], Index(*typing.cast(list[int], p[3])))
+        p[0] = Child(typing.cast(JSONPath, p[1]), Index(*typing.cast(list[int], p[3])))
 
     def p_jsonpath_child_slicebrackets(self, p: _Production) -> None:
         "jsonpath : jsonpath '[' slice ']'"
-        p[0] = Child(p[1], typing.cast(Slice, p[3]))
+        p[0] = Child(typing.cast(JSONPath, p[1]), typing.cast(Slice, p[3]))
 
     def p_jsonpath_parens(self, p: _Production) -> None:
         "jsonpath : '(' jsonpath ')'"

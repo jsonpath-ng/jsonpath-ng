@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import typing
 
 from jsonpath_ng.exceptions import JSONPathError
 
@@ -10,10 +11,14 @@ logger = logging.getLogger(__name__)
 
 # Turn on/off the automatic creation of id attributes
 # ... could be a kwarg pervasively but uses are rare and simple today
-auto_id_field = None
+auto_id_field: str | None = None
 
 NOT_SET = object()
 LIST_KEY = object()
+
+
+Container: typing.TypeAlias = dict[typing.Any, typing.Any] | list[typing.Any]
+FilterFunction: typing.TypeAlias = typing.Callable[[Container], bool]
 
 
 class JSONPath:
@@ -23,7 +28,7 @@ class JSONPath:
     JSONPath semantics.
     """
 
-    def find(self, data) -> list[DatumInContext]:
+    def find(self, data: typing.Any) -> list[DatumInContext]:
         """
         All `JSONPath` types support `find()`,
         which returns an iterable of `DatumInContext`s.
@@ -33,10 +38,10 @@ class JSONPath:
         """
         raise NotImplementedError()
 
-    def find_or_create(self, data) -> list[DatumInContext]:
+    def find_or_create(self, data: typing.Any) -> list[DatumInContext]:
         return self.find(data)
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         """
         Returns `data` with the specified path replaced by `val`. Only updates
         if the specified path exists.
@@ -44,10 +49,10 @@ class JSONPath:
 
         raise NotImplementedError()
 
-    def update_or_create(self, data, val):
+    def update_or_create(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return self.update(data, val)
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
         """
         Returns `data` with the specified path filtering nodes according
         the filter evaluation result returned by the filter function.
@@ -60,7 +65,7 @@ class JSONPath:
 
         raise NotImplementedError()
 
-    def child(self, child):
+    def child(self, child: JSONPath) -> JSONPath:
         """
         Equivalent to Child(self, next) but with some canonicalization
         """
@@ -73,7 +78,7 @@ class JSONPath:
         else:
             return Child(self, child)
 
-    def make_datum(self, value):
+    def make_datum(self, value: DatumInContext | typing.Any) -> DatumInContext:
         if isinstance(value, DatumInContext):
             return value
         else:
@@ -99,33 +104,36 @@ class DatumInContext:
     """
 
     @classmethod
-    def wrap(cls, data):
+    def wrap(cls, data: typing.Any) -> DatumInContext:
         if isinstance(data, cls):
             return data
         else:
             return cls(data)
 
     def __init__(
-        self, value, path: JSONPath | None = None, context: DatumInContext | None = None
+        self,
+        value: typing.Any,
+        path: JSONPath | None = None,
+        context: DatumInContext | typing.Any | None = None,
     ) -> None:
         self.__value__ = value
         self.path = path or This()
         # This is a hot path, so avoid the overhead of calling `wrap()`.
         if context is not None and not isinstance(context, DatumInContext):
             context = DatumInContext(context)
-        self.context = context
+        self.context: DatumInContext | None = context
 
     @property
-    def value(self):
+    def value(self) -> typing.Any:
         return self.__value__
 
     @value.setter
-    def value(self, value):
+    def value(self, value: typing.Any) -> None:
         if self.context is not None and self.context.value is not None:
             self.path.update(self.context.value, value)
         self.__value__ = value
 
-    def in_context(self, context, path):
+    def in_context(self, context: typing.Any, path: JSONPath) -> DatumInContext:
         context = DatumInContext.wrap(context)
 
         if self.context:
@@ -146,12 +154,12 @@ class DatumInContext:
         )
 
     @property
-    def id_pseudopath(self):
+    def id_pseudopath(self) -> JSONPath:
         """
         Looks like a path, but with ids stuck in when available
         """
         try:
-            pseudopath = Fields(str(self.value[auto_id_field]))
+            pseudopath: JSONPath = Fields(str(self.value[auto_id_field]))
         except (
             TypeError,
             AttributeError,
@@ -164,12 +172,12 @@ class DatumInContext:
         else:
             return pseudopath
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}(value={!r}, path={!r}, context={!r})".format(
             self.__class__.__name__, self.value, self.path, self.context
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, DatumInContext)
             and other.value == self.value
@@ -193,7 +201,7 @@ class AutoIdForDatum(DatumInContext):
     than `None`.
     """
 
-    def __init__(self, datum, id_field=None) -> None:
+    def __init__(self, datum: DatumInContext, id_field: str | None = None) -> None:
         """
         Invariant is that datum.path is the path from context to datum. The auto id
         will either be the id in the datum (if present) or the id of the context
@@ -206,28 +214,28 @@ class AutoIdForDatum(DatumInContext):
         self.id_field = id_field or auto_id_field
 
     @property
-    def value(self):
+    def value(self) -> str:
         return str(self.datum.id_pseudopath)
 
     @value.setter
-    def value(self, value):
+    def value(self, value: typing.Any) -> typing.Never:
         raise JSONPathError("The value of an auto ID cannot be set.")
 
     @property
-    def path(self):
+    def path(self) -> str | None:  # type: ignore[override]
         return self.id_field
 
     @property
-    def context(self):
+    def context(self) -> DatumInContext:  # type: ignore[override]
         return self.datum
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.datum!r})"
 
-    def in_context(self, context, path):
+    def in_context(self, context: typing.Any, path: JSONPath) -> AutoIdForDatum:
         return AutoIdForDatum(self.datum.in_context(context=context, path=path))
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, AutoIdForDatum)
             and other.datum == self.datum
@@ -241,7 +249,7 @@ class Root(JSONPath):
     The root is the topmost datum without any context attached.
     """
 
-    def find(self, data) -> list[DatumInContext]:
+    def find(self, data: DatumInContext | typing.Any) -> list[DatumInContext]:
         if not isinstance(data, DatumInContext):
             return [DatumInContext(data, path=Root(), context=None)]
         else:
@@ -250,22 +258,22 @@ class Root(JSONPath):
             else:
                 return Root().find(data.context)
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return val
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
         return data if fn(data) else None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "$"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Root()"
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, Root)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash("$")
 
 
@@ -274,25 +282,25 @@ class This(JSONPath):
     The JSONPath referring to the current datum. Concrete syntax is '@'.
     """
 
-    def find(self, datum):
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
         return [DatumInContext.wrap(datum)]
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return val
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
         return data if fn(data) else None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "`this`"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "This()"
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, This)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash("this")
 
 
@@ -302,11 +310,11 @@ class Child(JSONPath):
     Concrete syntax is <left> '.' <right>
     """
 
-    def __init__(self, left, right) -> None:
+    def __init__(self, left: JSONPath, right: JSONPath) -> None:
         self.left = left
         self.right = right
 
-    def find(self, datum):
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
         """
         Extra special case: auto ids do not have children,
         so cut it off right now rather than auto id the auto id
@@ -319,12 +327,12 @@ class Child(JSONPath):
             for submatch in self.right.find(subdata)
         ]
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         for datum in self.left.find(data):
             self.right.update(datum.value, val)
         return data
 
-    def find_or_create(self, datum):
+    def find_or_create(self, datum: typing.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         submatches = []
         for subdata in self.left.find_or_create(datum):
@@ -336,24 +344,24 @@ class Child(JSONPath):
                 submatches.append(submatch)
         return submatches
 
-    def update_or_create(self, data, val):
+    def update_or_create(self, data: typing.Any, val: typing.Any) -> typing.Any:
         for datum in self.left.find_or_create(data):
             self.right.update_or_create(datum.value, val)
         return _clean_list_keys(data)
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
         for datum in self.left.find(data):
             self.right.filter(fn, datum.value)
         return data
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Child)
             and self.left == other.left
             and self.right == other.right
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         # Special case: If the right side is a `SortedThis` instance,
         # do not inject a period between the left and right sides.
         # Adding a period would corrupt the syntax and prevent re-parsing.
@@ -365,10 +373,10 @@ class Child(JSONPath):
 
         return f"{self.left}.{self.right}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.left!r}, {self.right!r})"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.left, self.right))
 
 
@@ -379,20 +387,22 @@ class Parent(JSONPath):
     Available via named operator `parent`.
     """
 
-    def find(self, datum):
+    def find(self, datum: DatumInContext) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
-        return [datum.context]
+        context = datum.context
+        assert context is not None
+        return [context]
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, Parent)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "`parent`"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Parent()"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash("parent")
 
 
@@ -406,34 +416,34 @@ class Where(JSONPath):
     or some other better word for it.
     """
 
-    def __init__(self, left, right) -> None:
+    def __init__(self, left: JSONPath, right: JSONPath) -> None:
         self.left = left
         self.right = right
 
-    def find(self, data):
+    def find(self, data: typing.Any) -> list[DatumInContext]:
         return [subdata for subdata in self.left.find(data) if self.right.find(subdata)]
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         for datum in self.find(data):
             datum.path.update(data, val)
         return data
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
         for datum in self.find(data):
             datum.path.filter(fn, datum.value)
         return data
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.left} where {self.right}"
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Where)
             and other.left == self.left
             and other.right == self.right
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.left, self.right))
 
 
@@ -451,22 +461,22 @@ class WhereNot(Where):
 
     """
 
-    def find(self, data):
+    def find(self, data: typing.Any) -> list[DatumInContext]:
         return [
             subdata for subdata in self.left.find(data) if not self.right.find(subdata)
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.left} wherenot {self.right}"
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, WhereNot)
             and other.left == self.left
             and other.right == self.right
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.left, self.right))
 
 
@@ -476,17 +486,19 @@ class Descendants(JSONPath):
     of it which matches the right expression.
     """
 
-    def __init__(self, left, right) -> None:
+    def __init__(self, left: JSONPath, right: JSONPath) -> None:
         self.left = left
         self.right = right
 
-    def find(self, datum):
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
         # <left> .. <right> ==> <left> . (<right> | *..<right> | [*]..<right>)
         #
         # This walks the data directly instead of delegating to that equivalence.
 
-        # Get all left matches into a list
-        left_matches = self.left.find(datum)
+        # Get all left matches into a list.
+        # Some `find()` implementations (e.g. `Filter`, `SortedThis`)
+        # return a bare datum instead of a list, so this is typed as `Any`.
+        left_matches: typing.Any = self.left.find(datum)
 
         # TODO: Remove this condition once all `find()` methods return lists.
         if not isinstance(left_matches, list):
@@ -518,12 +530,14 @@ class Descendants(JSONPath):
 
         return matches
 
-    def is_singular(self):
+    def is_singular(self) -> typing.Literal[False]:
         return False
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         # Get all left matches into a list.
-        left_matches = self.left.find(data)
+        # Some `find()` implementations (e.g. `Filter`, `SortedThis`)
+        # return a bare datum instead of a list, so this is typed as `Any`.
+        left_matches: typing.Any = self.left.find(data)
 
         # TODO: Remove this condition once all `find()` methods return lists.
         if not isinstance(left_matches, list):
@@ -547,9 +561,11 @@ class Descendants(JSONPath):
 
         return data
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
         # Get all left matches into a list.
-        left_matches = self.left.find(data)
+        # Some `find()` implementations (e.g. `Filter`, `SortedThis`)
+        # return a bare datum instead of a list, so this is typed as `Any`.
+        left_matches: typing.Any = self.left.find(data)
 
         # TODO: Remove this condition once all `find()` methods return lists.
         if not isinstance(left_matches, list):
@@ -570,20 +586,20 @@ class Descendants(JSONPath):
 
         return data
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({self.left}..{self.right})"
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Descendants)
             and self.left == other.left
             and self.right == other.right
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.left!r}, {self.right!r})"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.left, self.right))
 
 
@@ -598,24 +614,24 @@ class Union(JSONPath):
     coincidence. It may even be a bug! (or laziness)
     """
 
-    def __init__(self, left, right) -> None:
+    def __init__(self, left: JSONPath, right: JSONPath) -> None:
         self.left = left
         self.right = right
 
-    def is_singular(self):
+    def is_singular(self) -> typing.Literal[False]:
         return False
 
-    def find(self, data):
+    def find(self, data: typing.Any) -> list[DatumInContext]:
         return self.left.find(data) + self.right.find(data)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Union)
             and self.left == other.left
             and self.right == other.right
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.left, self.right))
 
     def __repr__(self) -> str:
@@ -637,24 +653,24 @@ class Intersect(JSONPath):
     that.
     """
 
-    def __init__(self, left, right) -> None:
+    def __init__(self, left: JSONPath, right: JSONPath) -> None:
         self.left = left
         self.right = right
 
-    def is_singular(self):
+    def is_singular(self) -> typing.Literal[False]:
         return False
 
-    def find(self, data):
+    def find(self, data: typing.Any) -> list[DatumInContext]:
         raise NotImplementedError()
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Intersect)
             and self.left == other.left
             and self.right == other.right
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.left, self.right))
 
     def __repr__(self) -> str:
@@ -674,14 +690,16 @@ class Fields(JSONPath):
     The wildcard also selects all of the elements of an array.
     """
 
-    def __init__(self, *fields) -> None:
+    def __init__(self, *fields: str) -> None:
         self.fields = fields
 
-    def _is_wildcard_on_array(self, value) -> bool:
+    def _is_wildcard_on_array(self, value: typing.Any) -> bool:
         return "*" in self.fields and isinstance(value, (list, tuple))
 
     @staticmethod
-    def get_field_datum(datum, field, create):
+    def get_field_datum(
+        datum: DatumInContext, field: str, create: bool
+    ) -> DatumInContext | None:
         if field == auto_id_field:
             return AutoIdForDatum(datum)
         try:
@@ -695,7 +713,7 @@ class Fields(JSONPath):
         except (TypeError, AttributeError):
             return None
 
-    def reified_fields(self, datum):
+    def reified_fields(self, datum: DatumInContext) -> tuple[str, ...]:
         if "*" not in self.fields:
             return self.fields
         else:
@@ -705,13 +723,13 @@ class Fields(JSONPath):
             except AttributeError:
                 return ()
 
-    def find(self, datum):
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
         return self._find_base(datum, create=False)
 
-    def find_or_create(self, datum):
+    def find_or_create(self, datum: typing.Any) -> list[DatumInContext]:
         return self._find_base(datum, create=True)
 
-    def _find_base(self, datum, create):
+    def _find_base(self, datum: typing.Any, create: bool) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         if self._is_wildcard_on_array(datum.value):
             return Slice().find(datum)
@@ -721,17 +739,19 @@ class Fields(JSONPath):
         ]
         return [fd for fd in field_data if fd is not None]
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         if "*" in self.fields and isinstance(data, list):
             return Slice().update(data, val)
         if not hasattr(data, "get"):
             return data
         return self._update_base(data, val, create=False)
 
-    def update_or_create(self, data, val):
+    def update_or_create(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return self._update_base(data, val, create=True)
 
-    def _update_base(self, data, val, create):
+    def _update_base(
+        self, data: typing.Any, val: typing.Any, create: bool
+    ) -> typing.Any:
         if data is not None:
             for field in self.reified_fields(DatumInContext.wrap(data)):
                 if create and field not in data:
@@ -745,7 +765,7 @@ class Fields(JSONPath):
                         data[field] = val
         return data
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container:
         if "*" in self.fields and isinstance(data, list):
             return Slice().filter(fn, data)
         if data is not None and isinstance(data, dict):
@@ -755,7 +775,7 @@ class Fields(JSONPath):
                         data.pop(field)
         return data
 
-    def __str__(self):
+    def __str__(self) -> str:
         # Enclose fields in quotes as needed.
         # This is a conservative check, and is biased toward quoting fields.
         rendered_fields: list[str] = []
@@ -766,15 +786,15 @@ class Fields(JSONPath):
                 rendered_fields.append(f"{field!r}")
         return ",".join(rendered_fields)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({})".format(
             self.__class__.__name__, ",".join(map(repr, self.fields))
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, Fields) and tuple(self.fields) == tuple(other.fields)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(self.fields))
 
 
@@ -789,22 +809,22 @@ class Index(JSONPath):
     the abstract syntax is a Slice() with no parameters (equiv to `[:]`).
     """
 
-    def __init__(self, *indices) -> None:
+    def __init__(self, *indices: int) -> None:
         self.indices = indices
 
-    def find(self, datum):
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
         return self._find_base(datum, create=False)
 
-    def find_or_create(self, datum):
+    def find_or_create(self, datum: typing.Any) -> list[DatumInContext]:
         return self._find_base(datum, create=True)
 
-    def _find_base(self, datum, create):
+    def _find_base(self, datum: typing.Any, create: bool) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         if create:
             if datum.value == {}:
                 datum.value = _create_list_key(datum.value)
             self._pad_value(datum.value)
-        rv = []
+        rv: list[DatumInContext] = []
         if not isinstance(datum.value, (list, tuple)):
             # Integer indices only apply to arrays.
             return rv
@@ -816,13 +836,15 @@ class Index(JSONPath):
                 ]
         return rv
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return self._update_base(data, val, create=False)
 
-    def update_or_create(self, data, val):
+    def update_or_create(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return self._update_base(data, val, create=True)
 
-    def _update_base(self, data, val, create):
+    def _update_base(
+        self, data: typing.Any, val: typing.Any, create: bool
+    ) -> typing.Any:
         if create:
             if data == {}:
                 data = _create_list_key(data)
@@ -847,30 +869,30 @@ class Index(JSONPath):
                         raise e
         return data
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container:
         for index in self.indices:
             if fn(data[index]):
                 data.pop(index)  # relies on mutation :(
         return data
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, Index) and sorted(self.indices) == sorted(
             other.indices
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "[%s]" % ",".join(str(index) for index in self.indices)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(indices={self.indices!r})"
 
-    def _pad_value(self, value):
+    def _pad_value(self, value: typing.Any) -> None:
         _max = max(self.indices)
         if len(value) <= _max:
             pad = _max - len(value) + 1
             value += [{} for __ in range(pad)]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.indices)
 
 
@@ -884,12 +906,14 @@ class Slice(JSONPath):
     and the wildcard matches nothing when applied to a scalar value.
     """
 
-    def __init__(self, start=None, end=None, step=None) -> None:
+    def __init__(
+        self, start: int | None = None, end: int | None = None, step: int | None = None
+    ) -> None:
         self.start = start
         self.end = end
         self.step = step
 
-    def find(self, datum):
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
 
         is_wildcard = self.start is None and self.end is None and self.step is None
@@ -914,16 +938,16 @@ class Slice(JSONPath):
             for i in range(0, len(datum.value))[self.start : self.end : self.step]
         ]
 
-    def update(self, data, val):
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         for datum in self.find(data):
             datum.path.update(data, val)
         return data
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: Container) -> Container:
         while True:
             length = len(data)
             for datum in self.find(data):
-                data = datum.path.filter(fn, data)
+                data = typing.cast(Container, datum.path.filter(fn, data))
                 if len(data) < length:
                     break
 
@@ -931,8 +955,8 @@ class Slice(JSONPath):
                 break
         return data
 
-    def __str__(self):
-        elements = []
+    def __str__(self) -> str:
+        elements: list[str] = []
 
         for i, element in enumerate((self.start, self.end, self.step)):
             if element is None:
@@ -945,14 +969,14 @@ class Slice(JSONPath):
         if len(elements) == 1:
             elements.append("")
 
-        return f'[{":".join(elements) or "*"}]'
+        return f"[{':'.join(elements) or '*'}]"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}(start={!r},end={!r},step={!r})".format(
             self.__class__.__name__, self.start, self.end, self.step
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Slice)
             and other.start == self.start
@@ -960,21 +984,24 @@ class Slice(JSONPath):
             and other.step == self.step
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.start, self.end, self.step))
 
 
-def _create_list_key(dict_):
+def _create_list_key(
+    dict_: dict[typing.Any, typing.Any],
+) -> list[dict[str, typing.Any]]:
     """
     Adds a list to a dictionary by reference and returns the list.
 
     See `_clean_list_keys()`
     """
-    dict_[LIST_KEY] = new_list = [{}]
+    new_list: list[dict[str, typing.Any]] = [{}]
+    dict_[LIST_KEY] = new_list
     return new_list
 
 
-def _clean_list_keys(struct_):
+def _clean_list_keys(struct_: Container) -> Container:
     """
     Replace {LIST_KEY: ['foo', 'bar']} with ['foo', 'bar'].
 
