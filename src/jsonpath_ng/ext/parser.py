@@ -62,7 +62,7 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
         return t
 
     def t_SORT_DIRECTION(self, t: _RuleToken) -> _RuleToken:
-        r",?\s*(/|\\)"
+        r",?\s*(/|\\)(?=[a-zA-Z_@])"
         t.value = typing.cast(str, t.value)[-1]
         return t
 

@@ -298,6 +298,15 @@ test_cases = (
     pytest.param("foo * 3", {"foo": "f"}, ["foofoofoo"], id="arithmetic_mul5"),
     pytest.param("($.foo * 10 * $.foo) + 2", {"foo": 4}, [162], id="arithmetic_mul6"),
     pytest.param("$.foo * 10 * $.foo + 2", {"foo": 4}, [240], id="arithmetic_mul7"),
+    pytest.param("$.foo / 80", {"foo": 160}, [2.0], id="arithmetic_div1"),
+    pytest.param("160 / $.foo", {"foo": 4}, [40.0], id="arithmetic_div2"),
+    pytest.param("$.foo / $.bar", {"foo": 10, "bar": 4}, [2.5], id="arithmetic_div3"),
+    pytest.param(
+        "$.objects[*].cow / 2",
+        {"objects": [{"cow": 2}, {"cow": 4}, {"cow": 6}]},
+        [1.0, 2.0, 3.0],
+        id="arithmetic_div_list1",
+    ),
     pytest.param(
         "foo + bar", {"foo": "name", "bar": "node"}, ["foobar"], id="arithmetic_str0"
     ),
