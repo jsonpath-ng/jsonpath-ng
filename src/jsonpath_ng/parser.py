@@ -31,6 +31,23 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _combine_selectors(selectors: list[JSONPath]) -> JSONPath:
+    """Combine selectors while preserving the existing homogeneous AST forms."""
+    if len(selectors) == 1:
+        return selectors[0]
+
+    if all(isinstance(selector, Fields) for selector in selectors):
+        return Fields(*(field for selector in selectors for field in selector.fields))
+
+    if all(isinstance(selector, Index) for selector in selectors):
+        return Index(*(index for selector in selectors for index in selector.indices))
+
+    combined = selectors[0]
+    for selector in selectors[1:]:
+        combined = _Union(combined, selector)
+    return combined
+
+
 def parse(string: str) -> JSONPath:
     return JsonPathParser().parse(string)
 
@@ -149,29 +166,15 @@ class JsonPathParser:
         "jsonpath : '$'"
         p[0] = Root()
 
-    def p_jsonpath_idx(self, p: _Production) -> None:
-        "jsonpath : '[' idx ']'"
-        p[0] = Index(*typing.cast(list[int], p[2]))
-
-    def p_jsonpath_slice(self, p: _Production) -> None:
-        "jsonpath : '[' slice ']'"
-        p[0] = typing.cast(Slice, p[2])
-
-    def p_jsonpath_fieldbrackets(self, p: _Production) -> None:
-        "jsonpath : '[' fields ']'"
-        p[0] = Fields(*typing.cast(list[str], p[2]))
-
-    def p_jsonpath_child_fieldbrackets(self, p: _Production) -> None:
-        "jsonpath : jsonpath '[' fields ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), Fields(*typing.cast(list[str], p[3])))
-
-    def p_jsonpath_child_idxbrackets(self, p: _Production) -> None:
-        "jsonpath : jsonpath '[' idx ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), Index(*typing.cast(list[int], p[3])))
-
-    def p_jsonpath_child_slicebrackets(self, p: _Production) -> None:
-        "jsonpath : jsonpath '[' slice ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), typing.cast(Slice, p[3]))
+    def p_jsonpath_bracketed_selectors(self, p: _Production) -> None:
+        """jsonpath : '[' basic_selectors ']'
+        | jsonpath '[' selectors ']'"""
+        if len(p) == 4:
+            p[0] = _combine_selectors(typing.cast(list[JSONPath], p[2]))
+        else:
+            left = typing.cast(JSONPath, p[1])
+            selectors = typing.cast(list[JSONPath], p[3])
+            p[0] = Child(left, _combine_selectors(selectors))
 
     def p_jsonpath_parens(self, p: _Production) -> None:
         "jsonpath : '(' jsonpath ')'"
@@ -200,13 +203,37 @@ class JsonPathParser:
             list[str] | list[int], p[3]
         )
 
-    def p_idx(self, p: _Production) -> None:
-        "idx : NUMBER"
-        p[0] = [typing.cast(int, p[1])]
+    def p_basic_selectors_selector(self, p: _Production) -> None:
+        "basic_selectors : basic_selector"
+        p[0] = [typing.cast(JSONPath, p[1])]
 
-    def p_idx_comma(self, p: _Production) -> None:
-        "idx : idx ',' idx"
-        p[0] = typing.cast(list[int], p[1]) + typing.cast(list[int], p[3])
+    def p_basic_selectors_comma(self, p: _Production) -> None:
+        "basic_selectors : basic_selectors ',' basic_selector"
+        p[0] = typing.cast(list[JSONPath], p[1]) + [typing.cast(JSONPath, p[3])]
+
+    def p_selectors_selector(self, p: _Production) -> None:
+        "selectors : selector"
+        p[0] = [typing.cast(JSONPath, p[1])]
+
+    def p_selectors_comma(self, p: _Production) -> None:
+        "selectors : selectors ',' selector"
+        p[0] = typing.cast(list[JSONPath], p[1]) + [typing.cast(JSONPath, p[3])]
+
+    def p_selector_basic(self, p: _Production) -> None:
+        "selector : basic_selector"
+        p[0] = typing.cast(JSONPath, p[1])
+
+    def p_basic_selector_number(self, p: _Production) -> None:
+        "basic_selector : NUMBER"
+        p[0] = Index(typing.cast(int, p[1]))
+
+    def p_basic_selector_id(self, p: _Production) -> None:
+        "basic_selector : ID"
+        p[0] = Fields(typing.cast(str, p[1]))
+
+    def p_basic_selector_slice(self, p: _Production) -> None:
+        "basic_selector : slice"
+        p[0] = typing.cast(Slice, p[1])
 
     def p_slice_any(self, p: _Production) -> None:
         "slice : '*'"

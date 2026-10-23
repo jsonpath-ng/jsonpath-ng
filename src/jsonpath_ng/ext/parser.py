@@ -291,9 +291,9 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
         "filter : '?' expressions"
         p[0] = _filter.Filter(p[2])
 
-    def p_jsonpath_filter(self, p: _ExtProduction) -> None:
-        "jsonpath : jsonpath '[' filter ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), typing.cast(JSONPath, p[3]))
+    def p_selector_filter(self, p: _ExtProduction) -> None:
+        "selector : filter"
+        p[0] = typing.cast(JSONPath, p[1])
 
     def p_jsonpath_descendant_filter(self, p: _ExtProduction) -> None:
         "jsonpath : jsonpath DOUBLEDOT '[' filter ']'"
