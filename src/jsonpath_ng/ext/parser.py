@@ -36,6 +36,7 @@ from . import string as _string
 if typing.TYPE_CHECKING:
     from .._ply_types import _GenericProduction
     from .._ply_types import _RuleToken
+    from .._ply_types import _Token
     from .._ply_types import _Value
 
     _ExtValue: typing.TypeAlias = (
@@ -80,7 +81,7 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
 
     def t_SORT_DIRECTION(self, t: _RuleToken) -> _RuleToken:
         r",?\s*(/|\\)"
-        t.value = typing.cast(str, t.value)[-1]
+        t.value = typing.cast(str, t.value).strip()
         return t
 
     def t_ID(self, t: _RuleToken) -> _RuleToken:
@@ -96,6 +97,26 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
         r"-?\d+\.\d+"
         t.value = float(typing.cast(str, t.value))
         return t
+
+    def tokenize(self, string: str) -> typing.Iterator[_Token]:
+        # A slash starts or separates sort keys inside a sorting selector.
+        # Everywhere else a bare slash is the arithmetic division literal.
+        sorting: list[bool] = []
+        previous_type: str | None = None
+        for token in super().tokenize(string):
+            if token.type == "[":
+                sorting.append(False)
+            elif token.type == "]" and sorting:
+                sorting.pop()
+            elif token.type == "SORT_DIRECTION":
+                value = typing.cast(str, token.value)
+                if previous_type == "[":
+                    sorting[-1] = True
+                if value == "/" and not (sorting and sorting[-1]):
+                    token.type = "/"
+                token.value = value[-1]
+            previous_type = token.type
+            yield token
 
 
 class ExtendedJsonPathParser(parser.JsonPathParser):
