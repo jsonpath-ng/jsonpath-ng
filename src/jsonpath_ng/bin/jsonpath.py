@@ -76,7 +76,8 @@ def _find_matches_for_file(expr, f):
 
 
 def _print_matches(matches):
-    print("\n".join([f"{match.value}" for match in matches]))
+    for match in matches:
+        print(json.dumps(match.value))
 
 
 if __name__ == "__main__":
