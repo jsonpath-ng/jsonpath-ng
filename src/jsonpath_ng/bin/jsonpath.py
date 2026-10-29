@@ -16,21 +16,10 @@
 
 import argparse
 import glob
-
-# Standard Library imports
 import json
 import sys
 
-# JsonPath-RW imports
 from jsonpath_ng import parse
-
-
-def find_matches_for_file(expr, f):
-    return expr.find(json.load(f))
-
-
-def print_matches(matches):
-    print("\n".join([f"{match.value}" for match in matches]))
 
 
 def main():
@@ -73,13 +62,21 @@ def main():
 
     if len(glob_patterns) == 0:
         # stdin mode
-        print_matches(find_matches_for_file(expr, sys.stdin))
+        _print_matches(_find_matches_for_file(expr, sys.stdin))
     else:
         # file paths mode
         for pattern in glob_patterns:
             for filename in glob.glob(pattern):
                 with open(filename) as f:
-                    print_matches(find_matches_for_file(expr, f))
+                    _print_matches(_find_matches_for_file(expr, f))
+
+
+def _find_matches_for_file(expr, f):
+    return expr.find(json.load(f))
+
+
+def _print_matches(matches):
+    print("\n".join([f"{match.value}" for match in matches]))
 
 
 if __name__ == "__main__":
