@@ -33,7 +33,7 @@ def print_matches(matches):
     print("\n".join([f"{match.value}" for match in matches]))
 
 
-def main(*argv):
+def main():
     parser = argparse.ArgumentParser(
         description="Search JSON files (or stdin) according to a JSONPath expression.",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -66,7 +66,7 @@ def main(*argv):
         help="Files to search (if none, searches stdin)",
     )
 
-    args = parser.parse_args(argv[1:])
+    args = parser.parse_args(sys.argv[1:])
 
     expr = parse(args.expression)
     glob_patterns = args.files
@@ -82,5 +82,5 @@ def main(*argv):
                     print_matches(find_matches_for_file(expr, f))
 
 
-def entry_point():
-    main(*sys.argv)
+if __name__ == "__main__":
+    main()
