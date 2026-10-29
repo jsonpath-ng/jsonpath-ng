@@ -16,33 +16,17 @@ import re
 from .. import DatumInContext
 from .. import This
 
-SUB = re.compile(r"sub\(/(.*)/,\s+(.*)\)")
-# Regex generated using the EZRegex package (ezregex.org)
-# EZRegex code:
-# param1 = (
-#       group(optional(either("'", '"')), name='quote')
-#       + group(chunk)
-#       + earlier_group('quote')
-# )
-# param2 = group(either(optional('-') + number, '*'))
-# param3 = group(optional('-') + number)
-# pattern = (
-#       'split' + ow + '(' + ow
-#       + param1 + ow + ',' + ow
-#       + param2 + ow + ',' + ow
-#       + param3 + ow + ')'
-# )
-SPLIT = re.compile(
-    r"split(?:\s+)?\((?:\s+)?"
-    r"(?P<quote>(?:(?:'|\"))?)(.+)(?P=quote)(?:\s+)?,(?:\s+)?"
-    r"((?:(?:\-)?\d+|\*))(?:\s+)?,(?:\s+)?"
-    r"((?:\-)?\d+)(?:\s+)?\)"
-)
-STR = re.compile(r"str\(\)")
-
 
 class DefintionInvalid(Exception):
     pass
+
+
+# The `sub` definition is matched in two steps to avoid quadratic backtracking.
+# A single `sub\(/(.*)/,\s+(.*)\)` rescans the rest of the line
+# for every `/,` candidate when the final `)` is missing.
+# Matching the text up to the last `)` first makes every candidate viable.
+_SUB_BODY = re.compile(r"sub\(/(.*)\)")
+_SUB_PARTS = re.compile(r"(.*)/,\s+(.*)")
 
 
 class Sub(This):
@@ -52,7 +36,9 @@ class Sub(This):
     """
 
     def __init__(self, method=None) -> None:
-        m = SUB.match(method)
+        m = _SUB_BODY.match(method)
+        if m is not None:
+            m = _SUB_PARTS.fullmatch(m.group(1))
         if m is None:
             raise DefintionInvalid("%s is not valid" % method)
         self.expr = m.group(1).strip()
@@ -78,6 +64,15 @@ class Sub(This):
         return f"`sub(/{self.expr}/, {self.repl})`"
 
 
+_SPLIT = re.compile(
+    r"split\s*+\("
+    r"(?:\s*+|\s*(?=\s(?!\s)))"
+    r"(?P<quote>['\"]?)((?:\S|[^\S\n]++)+)(?P=quote)\s*+,\s*+"
+    r"(-?\d++|\*)\s*+,\s*+"
+    r"(-?\d++)\s*+\)"
+)
+
+
 class Split(This):
     """String splitter
 
@@ -89,7 +84,7 @@ class Split(This):
     """
 
     def __init__(self, method=None) -> None:
-        m = SPLIT.match(method)
+        m = _SPLIT.match(method)
         if m is None:
             raise DefintionInvalid("%s is not valid" % method)
         self.chars = m.group(2)
@@ -118,6 +113,9 @@ class Split(This):
         return "`%s`" % self.method
 
 
+_STR = re.compile(r"str\(\)")
+
+
 class Str(This):
     """String converter
 
@@ -125,7 +123,7 @@ class Str(This):
     """
 
     def __init__(self, method=None) -> None:
-        m = STR.match(method)
+        m = _STR.match(method)
         if m is None:
             raise DefintionInvalid("%s is not valid" % method)
         self.method = method

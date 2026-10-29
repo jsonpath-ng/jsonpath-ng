@@ -10,6 +10,37 @@ CHANGELOG
 
 ..  scriv-insert-here
 
+.. _changelog-1.15.0:
+
+1.15.0 - 2026-10-29
+===================
+
+Fixed
+-----
+
+*   Fix the ``sub`` and ``split`` extensions taking quadratic time
+    to reject malformed definitions.
+
+Changed
+-------
+
+*   Relicense the CLI code under the Apache 2.0 license.
+
+    Relicensing is allowed under the terms of the previous license.
+
+*   Make the CLI print matches as valid JSONL.
+
+    Previously the output was simply Python ``repr()`` output,
+    so ``{"json": true}`` was output as ``{'json': True}``
+    and could not be re-parsed as JSON.
+
+*   Support running the CLI via ``python -m jsonpath_ng``.
+
+Documentation
+-------------
+
+*   Fix the ``sub`` example in the README, which had too many backslashes.
+
 .. _changelog-1.14.0:
 
 1.14.0 - 2026-10-26

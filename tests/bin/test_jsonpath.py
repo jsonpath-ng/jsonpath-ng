@@ -1,37 +1,49 @@
 """
-Tests for the jsonpath.py command line interface.
+Tests for the CLI.
 """
 
 import io
-import json
-import os
-import sys
+import pathlib
 
 from jsonpath_ng.bin.jsonpath import main
 
 
 def test_stdin_mode(monkeypatch, capsys):
-    stdin_text = json.dumps(
-        {
-            "foo": {
-                "baz": 1,
-                "bizzle": {"baz": 2},
-            },
-        }
-    )
-    monkeypatch.setattr(sys, "stdin", io.StringIO(stdin_text))
+    test_file = pathlib.Path(__file__).parent / "test1.json"
+    monkeypatch.setattr("sys.stdin", io.StringIO(test_file.read_text()))
+    monkeypatch.setattr("sys.argv", ("literally-anything", "$.foo..baz"))
 
-    main("jsonpath.py", "foo..baz")
+    main()
 
     stdout, _ = capsys.readouterr()
     assert stdout == "1\n2\n"
 
 
-def test_filename_mode(capsys):
-    test1 = os.path.join(os.path.dirname(__file__), "test1.json")
-    test2 = os.path.join(os.path.dirname(__file__), "test2.json")
+def test_filename_mode(monkeypatch, capsys):
+    root = pathlib.Path(__file__).parent
 
-    main("jsonpath.py", "foo..baz", test1, test2)
+    sys_argv = (
+        "literally-anything",
+        "$.foo..baz",
+        str(root / "test1.json"),
+        str(root / "test2.json"),
+    )
+    monkeypatch.setattr("sys.argv", sys_argv)
+
+    main()
 
     stdout, _ = capsys.readouterr()
     assert stdout == "1\n2\n3\n4\n"
+
+
+def test_json_output(monkeypatch, capsys):
+    """Verify the CLI prints valid JSONL, not Python `repr` output."""
+
+    json_content = '[{"x": {"str": null}}, {"x": true}]'
+    monkeypatch.setattr("sys.stdin", io.StringIO(json_content))
+    monkeypatch.setattr("sys.argv", ("literally-anything", "$..x"))
+
+    main()
+
+    stdout, _ = capsys.readouterr()
+    assert stdout == '{"str": null}\ntrue\n'
