@@ -180,7 +180,9 @@ class DatumInContext:
         Looks like a path, but with ids stuck in when available
         """
         try:
-            pseudopath: JSONPath = Fields(str(self.value[auto_id_field]))
+            pseudopath: JSONPath = Fields._compliant_constructor(
+                str(self.value[auto_id_field])
+            )
         except (
             TypeError,
             AttributeError,
@@ -556,7 +558,9 @@ class Descendants(JSONPath):
                 stack.extend(children)
             elif isinstance(value, dict):
                 stack.extend(
-                    DatumInContext(child, context=datum, path=Fields(field))
+                    DatumInContext(
+                        child, context=datum, path=Fields._compliant_constructor(field)
+                    )
                     for field, child in reversed(value.items())
                 )
 
@@ -725,18 +729,46 @@ class _Intersect(JSONPath):
 class Fields(JSONPath):
     """
     JSONPath referring to some field of the current object.
-    Concrete syntax ix comma-separated field names.
+    Concrete syntax is comma-separated field names.
 
-    WARNING: If '*' is any of the field names, then they will
-    all be returned.
-    The wildcard also selects all of the elements of an array.
+    DEPRECATED: If '*' is any of the field names given to the constructor,
+    then every field will be returned, and so will every element of an array.
+    This will change in version 2.0.0, when '*' will be an ordinary field name.
+    Use `Wildcard()` to select every child.
     """
 
+    # True only for a hand-built `Fields('*')`, which is a deprecated wildcard.
+    # A name that came from a query or from the data is never a wildcard.
+    _deprecated_wildcard_use: bool
+
     def __init__(self, *fields: str) -> None:
+        self._deprecated_wildcard_use = "*" in fields
+        if self._deprecated_wildcard_use:
+            msg = (
+                "Using `Fields('*')` as a wildcard is deprecated. "
+                "In version 2.0.0, `Fields('*')` will select only a field named `*`. "
+                "Use `Wildcard()` to select every child."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self.fields = fields
 
+    @classmethod
+    def _compliant_constructor(cls, *fields: str) -> Fields:
+        """
+        Create a node whose names are all plain names.
+
+        This method solely exists to support instantiation
+        without triggering a wildcard-related DeprecationWarning.
+        This method will be removed in version 2.0.0.
+        """
+
+        node = cls.__new__(cls)
+        node.fields = fields
+        node._deprecated_wildcard_use = False
+        return node
+
     def _is_wildcard_on_array(self, value: typing.Any) -> bool:
-        return "*" in self.fields and isinstance(value, (list, tuple))
+        return self._deprecated_wildcard_use and isinstance(value, (list, tuple))
 
     @staticmethod
     def get_field_datum(
@@ -751,12 +783,14 @@ class Fields(JSONPath):
                     datum.value[field] = field_value = {}
                 else:
                     return None
-            return DatumInContext(field_value, path=Fields(field), context=datum)
+            return DatumInContext(
+                field_value, path=Fields._compliant_constructor(field), context=datum
+            )
         except (TypeError, AttributeError):
             return None
 
     def reified_fields(self, datum: DatumInContext) -> tuple[str, ...]:
-        if "*" not in self.fields:
+        if not self._deprecated_wildcard_use:
             return self.fields
         else:
             try:
@@ -782,7 +816,7 @@ class Fields(JSONPath):
         return [fd for fd in field_data if fd is not None]
 
     def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
-        if "*" in self.fields and isinstance(data, list):
+        if self._deprecated_wildcard_use and isinstance(data, list):
             return Slice().update(data, val)
         if not hasattr(data, "get"):
             return data
@@ -808,7 +842,7 @@ class Fields(JSONPath):
         return data
 
     def filter(self, fn: FilterFunction, data: Container) -> Container:
-        if "*" in self.fields and isinstance(data, list):
+        if self._deprecated_wildcard_use and isinstance(data, list):
             return Slice().filter(fn, data)
         if data is not None and isinstance(data, dict):
             for field in self.reified_fields(DatumInContext.wrap(data)):
@@ -824,22 +858,102 @@ class Fields(JSONPath):
         # Otherwise, the extended parser reads the `@` as the current node.
         rendered_fields: list[str] = []
         for field in self.fields:
-            if re.match(r"^@?[A-Za-z_][A-Za-z0-9_@-]*$", field):
+            if (field == "*" and self._deprecated_wildcard_use) or re.match(
+                r"^@?[A-Za-z_][A-Za-z0-9_@-]*$", field
+            ):
                 rendered_fields.append(field)
             else:
                 rendered_fields.append(f"{field!r}")
         return ",".join(rendered_fields)
 
     def __repr__(self) -> str:
-        return "{}({})".format(
-            self.__class__.__name__, ",".join(map(repr, self.fields))
-        )
+        fields = ",".join(map(repr, self.fields))
+        if not self._deprecated_wildcard_use and "*" in self.fields:
+            # Distinguish a field named `*` from the deprecated wildcard.
+            return f"{self.__class__.__name__}._compliant_constructor({fields})"
+        return f"{self.__class__.__name__}({fields})"
 
     def __eq__(self, other: typing.Any) -> bool:
-        return isinstance(other, Fields) and tuple(self.fields) == tuple(other.fields)
+        return (
+            isinstance(other, Fields)
+            and tuple(self.fields) == tuple(other.fields)
+            and self._deprecated_wildcard_use == other._deprecated_wildcard_use
+        )
 
     def __hash__(self) -> int:
-        return hash(tuple(self.fields))
+        return hash((tuple(self.fields), self._deprecated_wildcard_use))
+
+
+class Wildcard(JSONPath):
+    """
+    JSONPath that matches every child of an object or array.
+    Concrete syntax is `*`, as in `$.*` and `$[*]`.
+
+    RFC 9535, section 2.3.2: a wildcard selects every member of an object
+    and every element of an array, and selects nothing from a scalar.
+    """
+
+    @staticmethod
+    def _keys(value: typing.Any) -> tuple[typing.Any, ...]:
+        try:
+            return tuple(value.keys())
+        except AttributeError:
+            return ()
+
+    def find(self, datum: typing.Any) -> list[DatumInContext]:
+        datum = DatumInContext.wrap(datum)
+        if isinstance(datum.value, (list, tuple)):
+            return Slice().find(datum)
+        if isinstance(datum.value, dict) and auto_id_field is None:
+            # Without auto ids, every member exists, so skip the per-name lookups.
+            make_path = Fields._compliant_constructor
+            return [
+                DatumInContext(value, path=make_path(key), context=datum)
+                for key, value in datum.value.items()
+            ]
+        try:
+            keys = tuple(datum.value.keys())
+        except AttributeError:
+            return []
+        if auto_id_field is not None:
+            keys += (auto_id_field,)
+        field_data = [Fields.get_field_datum(datum, key, False) for key in keys]
+        return [fd for fd in field_data if fd is not None]
+
+    def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
+        if isinstance(data, list):
+            return Slice().update(data, val)
+        if not hasattr(data, "get"):
+            return data
+        return self.update_or_create(data, val)
+
+    def update_or_create(self, data: typing.Any, val: typing.Any) -> typing.Any:
+        # Children that already exist are the only ones that can be updated,
+        # so there is nothing to create.
+        return Fields._compliant_constructor(*self._keys(data))._update_base(
+            data, val, create=False
+        )
+
+    def filter(self, fn: FilterFunction, data: Container) -> Container:
+        if isinstance(data, list):
+            return Slice().filter(fn, data)
+        if isinstance(data, dict):
+            for key, value in list(data.items()):
+                if fn(value):
+                    del data[key]
+        return data
+
+    def __str__(self) -> str:
+        return "*"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    def __eq__(self, other: typing.Any) -> bool:
+        return isinstance(other, Wildcard)
+
+    def __hash__(self) -> int:
+        return hash(Wildcard)
 
 
 class Index(JSONPath):
@@ -981,7 +1095,9 @@ class Slice(JSONPath):
 
         if is_wildcard and isinstance(datum.value, dict):
             return [
-                DatumInContext(value, path=Fields(field), context=datum)
+                DatumInContext(
+                    value, path=Fields._compliant_constructor(field), context=datum
+                )
                 for field, value in datum.value.items()
             ]
 
@@ -1044,7 +1160,7 @@ class Slice(JSONPath):
         if len(elements) == 1:
             elements.append("")
 
-        return f"[{':'.join(elements) or '*'}]"
+        return f"[{':'.join(elements) or ':'}]"
 
     def __repr__(self) -> str:
         return "{}(start={!r},end={!r},step={!r})".format(

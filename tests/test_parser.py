@@ -7,6 +7,7 @@ from jsonpath_ng.jsonpath import Index
 from jsonpath_ng.jsonpath import Slice
 from jsonpath_ng.jsonpath import Where
 from jsonpath_ng.jsonpath import WhereNot
+from jsonpath_ng.jsonpath import Wildcard
 from jsonpath_ng.lexer import JsonPathLexer
 from jsonpath_ng.parser import JsonPathParser
 
@@ -19,13 +20,13 @@ parser_test_cases = (
     ("😀", Fields("😀")),
     ("你好", Fields("你好")),
     ("foo", Fields("foo")),
-    ("*", Fields("*")),
+    ("*", Wildcard()),
     ("1", Fields("1")),
     ("baz,bizzle", Fields("baz", "bizzle")),
     ("[1]", Index(1)),
     ("[1:]", Slice(start=1)),
     ("[:]", Slice()),
-    ("[*]", Slice()),
+    ("[*]", Wildcard()),
     ("[:2]", Slice(end=2)),
     ("[1:2]", Slice(start=1, end=2)),
     ("[5:-2]", Slice(start=5, end=-2)),

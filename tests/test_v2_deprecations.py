@@ -9,6 +9,7 @@ import jsonpath_ng.ext.parser as parser
 import jsonpath_ng.jsonpath
 from jsonpath_ng.ext.filter import Filter
 from jsonpath_ng.jsonpath import Child
+from jsonpath_ng.jsonpath import Fields
 from jsonpath_ng.jsonpath import Root
 from tests.helpers import assert_value_equality
 
@@ -215,3 +216,77 @@ def test_bare_word_comparison_operand_still_means_a_string():
 def test_comparison_operands_that_are_not_bare_words_do_not_warn(query):
     # `pytest` turns every warning into an error.
     jsonpath_ng.ext.parse(query)
+
+
+def test_building_fields_star_is_deprecated():
+    with pytest.warns(DeprecationWarning, match=r"Fields\('\*'\).*Wildcard\(\)"):
+        Fields("*")
+
+
+def test_building_fields_that_include_star_is_deprecated():
+    with pytest.warns(DeprecationWarning, match=r"Wildcard\(\)"):
+        Fields("a", "*")
+
+
+def test_building_fields_without_star_is_not_deprecated(recwarn):
+    Fields("a", "b")
+
+    assert not recwarn.list
+
+
+def test_deprecated_fields_star_still_selects_object_members():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert [m.value for m in path.find({"a": 1, "b": 2})] == [1, 2]
+
+
+def test_deprecated_fields_star_still_selects_array_elements():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert [m.value for m in path.find([1, 2])] == [1, 2]
+
+
+def test_deprecated_fields_star_still_updates_and_filters():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert path.update({"a": 1, "b": 2}, 0) == {"a": 0, "b": 0}
+    assert path.update([1, 2], 0) == [0, 0]
+    assert path.filter(lambda value: value > 1, {"a": 1, "b": 2}) == {"a": 1}
+
+
+def test_deprecated_fields_star_text_form_still_means_wildcard():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert str(path) == "*"
+
+
+def test_parsing_never_triggers_the_fields_star_deprecation(recwarn):
+    for expression in ("$.*", "$[*]", "$..*", "$['*']", "$.'*'", "$['*','b']"):
+        jsonpath_ng.parse(expression).find({"*": 1, "b": 2})
+        jsonpath_ng.ext.parse(expression).find({"*": 1, "b": 2})
+
+    assert not recwarn.list
+
+
+def test_a_data_key_named_star_never_triggers_the_deprecation(recwarn):
+    data = {"*": 1, "a": {"*": 2}}
+
+    jsonpath_ng.parse("$..*").find(data)
+    jsonpath_ng.ext.parse("$[?@.*]").find({"x": {"*": 1}})
+    jsonpath_ng.ext.parse("$[?@ > 0]").find(data)
+    jsonpath_ng.parse("$..a").find(data)
+
+    assert not recwarn.list
+
+
+@pytest.mark.xfail(strict=True, reason="These attributes should be deleted in v2")
+@pytest.mark.parametrize(
+    "attribute",
+    ("_compliant_constructor", "_deprecated_wildcard_use"),
+)
+def test_fields_attributes(attribute):
+    assert not hasattr(Fields("x"), attribute)
