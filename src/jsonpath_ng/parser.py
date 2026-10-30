@@ -23,6 +23,7 @@ from jsonpath_ng.jsonpath import Slice
 from jsonpath_ng.jsonpath import This
 from jsonpath_ng.jsonpath import Where
 from jsonpath_ng.jsonpath import WhereNot
+from jsonpath_ng.jsonpath import Wildcard
 from jsonpath_ng.jsonpath import _Intersect
 from jsonpath_ng.jsonpath import _Union
 from jsonpath_ng.lexer import JsonPathLexer
@@ -135,7 +136,10 @@ class JsonPathParser:
 
     def p_jsonpath_fields(self, p: _Production) -> None:
         "jsonpath : fields_or_any"
-        p[0] = Fields(*typing.cast(list[str], p[1]))
+        if isinstance(p[1], Wildcard):
+            p[0] = p[1]
+        else:
+            p[0] = Fields._compliant_constructor(*typing.cast(list[str], p[1]))
 
     def p_jsonpath_named_operator(self, p: _Production) -> None:
         "jsonpath : NAMED_OPERATOR"
@@ -159,15 +163,18 @@ class JsonPathParser:
 
     def p_jsonpath_slice(self, p: _Production) -> None:
         "jsonpath : '[' slice ']'"
-        p[0] = typing.cast(Slice, p[2])
+        p[0] = typing.cast(JSONPath, p[2])
 
     def p_jsonpath_fieldbrackets(self, p: _Production) -> None:
         "jsonpath : '[' fields ']'"
-        p[0] = Fields(*typing.cast(list[str], p[2]))
+        p[0] = Fields._compliant_constructor(*typing.cast(list[str], p[2]))
 
     def p_jsonpath_child_fieldbrackets(self, p: _Production) -> None:
         "jsonpath : jsonpath '[' fields ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), Fields(*typing.cast(list[str], p[3])))
+        p[0] = Child(
+            typing.cast(JSONPath, p[1]),
+            Fields._compliant_constructor(*typing.cast(list[str], p[3])),
+        )
 
     def p_jsonpath_child_idxbrackets(self, p: _Production) -> None:
         "jsonpath : jsonpath '[' idx ']'"
@@ -175,20 +182,21 @@ class JsonPathParser:
 
     def p_jsonpath_child_slicebrackets(self, p: _Production) -> None:
         "jsonpath : jsonpath '[' slice ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), typing.cast(Slice, p[3]))
+        p[0] = Child(typing.cast(JSONPath, p[1]), typing.cast(JSONPath, p[3]))
 
     def p_jsonpath_parens(self, p: _Production) -> None:
         "jsonpath : '(' jsonpath ')'"
         p[0] = typing.cast(JSONPath, p[2])
 
-    # Because fields in brackets cannot be '*' - that is reserved for array indices
+    # An unquoted '*' is the wildcard selector (RFC 9535, section 2.3.2);
+    # a quoted '*' is a field name and arrives here as a `fields` list.
     def p_fields_or_any(self, p: _Production) -> None:
         """fields_or_any : fields
         | '*'
         | NUMBER"""
         p1 = p[1]
         if p1 == "*":
-            p[0] = ["*"]
+            p[0] = Wildcard()
         elif isinstance(p1, int):
             p[0] = [str(p1)]
         else:
@@ -214,7 +222,7 @@ class JsonPathParser:
 
     def p_slice_any(self, p: _Production) -> None:
         "slice : '*'"
-        p[0] = Slice()
+        p[0] = Wildcard()
 
     def p_slice(self, p: _Production) -> None:  # Currently does not support `step`
         """slice : maybe_int ':' maybe_int

@@ -13,8 +13,7 @@ parsers = pytest.mark.parametrize(
 @pytest.mark.parametrize(
     "data, expected_start, expected_end, expected_step",
     (
-        # Special case
-        pytest.param("[*]", None, None, None, id="wildcard"),
+        pytest.param("[:]", None, None, None, id="empty"),
         # Individual elements
         pytest.param("[0:]", 0, None, None, id="start-false-y"),
         pytest.param("[1:]", 1, None, None, id="start-1"),
@@ -213,3 +212,15 @@ def test_filter_in_compound_queries(parse):
 
     assert parse("$..[::2]").filter(lambda value: isinstance(value, int), data) is data
     assert data == {"a": [2, 4], "b": [[2], [5]], "c": {"d": 1}}
+
+
+@parsers
+@pytest.mark.parametrize("expression", ("$[:]", "$[::]", "$[0:]", "$[:2]", "$[::2]"))
+def test_text_form_of_a_slice_parses_back_to_it(parse, expression):
+    path = parse(expression)
+
+    assert parse(str(path)) == path
+
+
+def test_text_form_of_an_empty_slice_is_not_a_wildcard():
+    assert str(jsonpath_ng.Slice()) == "[:]"

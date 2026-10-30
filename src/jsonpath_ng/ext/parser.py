@@ -210,11 +210,17 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
 
     def p_singular_query_name(self, p: _ExtProduction) -> None:
         "singular_query : singular_query '.' singular_name"
-        p[0] = Child(typing.cast(JSONPath, p[1]), Fields(typing.cast(str, p[3])))
+        p[0] = Child(
+            typing.cast(JSONPath, p[1]),
+            Fields._compliant_constructor(typing.cast(str, p[3])),
+        )
 
     def p_singular_query_bracketed_name(self, p: _ExtProduction) -> None:
         "singular_query : singular_query '[' ID ']'"
-        p[0] = Child(typing.cast(JSONPath, p[1]), Fields(typing.cast(str, p[3])))
+        p[0] = Child(
+            typing.cast(JSONPath, p[1]),
+            Fields._compliant_constructor(typing.cast(str, p[3])),
+        )
 
     def p_singular_query_index(self, p: _ExtProduction) -> None:
         "singular_query : singular_query '[' NUMBER ']'"

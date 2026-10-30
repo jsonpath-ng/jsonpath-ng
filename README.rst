@@ -76,9 +76,9 @@ Basic examples:
 
     # You can also build expressions directly quite easily
     >>> from jsonpath_ng.jsonpath import Fields
-    >>> from jsonpath_ng.jsonpath import Slice
+    >>> from jsonpath_ng.jsonpath import Wildcard
 
-    >>> parse('foo[*].baz') == Fields('foo').child(Slice()).child(Fields('baz'))
+    >>> parse('foo[*].baz') == Fields('foo').child(Wildcard()).child(Fields('baz'))
     True
 
 
@@ -173,7 +173,7 @@ easy to do so directly, and here are some examples:
 -  ``Fields('foo', 'bar')``
 -  ``Index(42)``
 -  ``Child(Fields('foo'), Index(42))``
--  ``Where(Slice(), Fields('subfield'))``
+-  ``Where(Wildcard(), Fields('subfield'))``
 -  ``Descendants(jsonpath, jsonpath)``
 
 
