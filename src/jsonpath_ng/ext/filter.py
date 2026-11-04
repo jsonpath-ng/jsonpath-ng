@@ -191,7 +191,7 @@ class Filter(JSONPath):
 
         if isinstance(datum.value, dict):
             candidates = datum.value.items()
-            make_path = Fields
+            make_path = Fields._compliant_constructor
         elif isinstance(datum.value, list):
             candidates = enumerate(datum.value)
             make_path = Index

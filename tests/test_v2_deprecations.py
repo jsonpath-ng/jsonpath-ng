@@ -9,7 +9,10 @@ import jsonpath_ng.ext.parser as parser
 import jsonpath_ng.jsonpath
 from jsonpath_ng.ext.filter import Filter
 from jsonpath_ng.jsonpath import Child
+from jsonpath_ng.jsonpath import Fields
 from jsonpath_ng.jsonpath import Root
+from jsonpath_ng.jsonpath import Slice
+from jsonpath_ng.jsonpath import Wildcard
 from tests.helpers import assert_value_equality
 
 
@@ -215,3 +218,186 @@ def test_bare_word_comparison_operand_still_means_a_string():
 def test_comparison_operands_that_are_not_bare_words_do_not_warn(query):
     # `pytest` turns every warning into an error.
     jsonpath_ng.ext.parse(query)
+
+
+def test_building_fields_star_is_deprecated():
+    with pytest.warns(DeprecationWarning, match=r"Fields\('\*'\).*Wildcard\(\)"):
+        Fields("*")
+
+
+def test_building_fields_that_include_star_is_deprecated():
+    with pytest.warns(DeprecationWarning, match=r"Wildcard\(\)"):
+        Fields("a", "*")
+
+
+def test_building_fields_without_star_is_not_deprecated(recwarn):
+    Fields("a", "b")
+
+    assert not recwarn.list
+
+
+def test_deprecated_fields_star_still_selects_object_members():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert [m.value for m in path.find({"a": 1, "b": 2})] == [1, 2]
+
+
+def test_deprecated_fields_star_still_selects_array_elements():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert [m.value for m in path.find([1, 2])] == [1, 2]
+
+
+def test_deprecated_fields_star_still_updates_and_filters():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert path.update({"a": 1, "b": 2}, 0) == {"a": 0, "b": 0}
+    assert path.update([1, 2], 0) == [0, 0]
+    assert path.filter(lambda value: value > 1, {"a": 1, "b": 2}) == {"a": 1}
+
+
+def test_deprecated_fields_star_text_form_still_means_wildcard():
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+
+    assert str(path) == "*"
+
+
+def test_parsing_never_triggers_the_fields_star_deprecation(recwarn):
+    for expression in ("$.*", "$[*]", "$..*", "$['*']", "$.'*'", "$['*','b']"):
+        jsonpath_ng.parse(expression).find({"*": 1, "b": 2})
+        jsonpath_ng.ext.parse(expression).find({"*": 1, "b": 2})
+
+    assert not recwarn.list
+
+
+def test_a_data_key_named_star_never_triggers_the_deprecation(recwarn):
+    data = {"*": 1, "a": {"*": 2}}
+
+    jsonpath_ng.parse("$..*").find(data)
+    jsonpath_ng.ext.parse("$[?@.*]").find({"x": {"*": 1}})
+    jsonpath_ng.ext.parse("$[?@ > 0]").find(data)
+    jsonpath_ng.parse("$..a").find(data)
+
+    assert not recwarn.list
+
+
+@pytest.mark.xfail(strict=True, reason="These attributes should be deleted in v2")
+@pytest.mark.parametrize(
+    "attribute",
+    ("_compliant_constructor", "_deprecated_wildcard_use"),
+)
+def test_fields_attributes(attribute):
+    assert not hasattr(Fields("x"), attribute)
+
+
+def test_building_an_empty_slice_is_deprecated():
+    with pytest.warns(DeprecationWarning, match=r"Slice\(\).*Wildcard\(\)"):
+        Slice()
+
+
+def test_building_an_empty_slice_with_explicit_nones_is_deprecated():
+    with pytest.warns(DeprecationWarning, match=r"Wildcard\(\)"):
+        Slice(None, None, None)
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    (
+        pytest.param((0,), id="start"),
+        pytest.param((None, 2), id="end"),
+        pytest.param((None, None, 2), id="step"),
+        pytest.param((1, 2, 3), id="all"),
+    ),
+)
+def test_building_a_slice_with_parameters_is_not_deprecated(recwarn, arguments):
+    Slice(*arguments)
+
+    assert not recwarn.list
+
+
+def test_the_compliant_slice_constructor_does_not_warn(recwarn):
+    Slice._compliant_constructor()
+    Slice._compliant_constructor(None, None, None)
+    Slice._compliant_constructor(1, 2, 3)
+
+    assert not recwarn.list
+
+
+def test_the_compliant_slice_constructor_selects_nothing_from_objects():
+    data = {"a": 1, "b": 2}
+    path = Slice._compliant_constructor()
+
+    assert path.find(data) == []
+    assert path.update(data, 0) == {"a": 1, "b": 2}
+    assert path.filter(lambda value: True, data) == {"a": 1, "b": 2}
+
+
+def test_the_compliant_slice_constructor_selects_array_elements():
+    path = Slice._compliant_constructor()
+
+    assert [m.value for m in path.find([1, 2])] == [1, 2]
+    assert path.update([1, 2], 0) == [0, 0]
+    assert path.filter(lambda value: value > 1, [1, 2]) == [1]
+
+
+def test_deprecated_empty_slice_still_selects_object_members():
+    with pytest.warns(DeprecationWarning):
+        path = Slice()
+
+    data = {"a": 1, "b": 2}
+    assert [m.value for m in path.find(data)] == [1, 2]
+    assert path.update(data, 0) == {"a": 0, "b": 0}
+    assert path.filter(lambda value: value == 0, data) == {}
+
+
+def test_deprecated_empty_slice_still_selects_array_elements():
+    with pytest.warns(DeprecationWarning):
+        path = Slice()
+
+    assert [m.value for m in path.find([1, 2])] == [1, 2]
+    assert path.update([1, 2], 0) == [0, 0]
+    assert path.filter(lambda value: value > 1, [1, 2]) == [1]
+
+
+def test_the_empty_slice_text_form_is_unchanged():
+    with pytest.warns(DeprecationWarning):
+        path = Slice()
+
+    assert str(path) == "[:]"
+
+
+@pytest.mark.parametrize(
+    "expression", ("$[:]", "$[::]", "$[*]", "$.*", "$..*", "$..[:]", "$[0:2]")
+)
+def test_parsing_never_triggers_the_empty_slice_deprecation(recwarn, expression):
+    for parse in (jsonpath_ng.parse, jsonpath_ng.ext.parse):
+        parse(expression).find({"a": [1], "b": {"c": 2}})
+
+    assert not recwarn.list
+
+
+def test_wildcard_never_triggers_the_empty_slice_deprecation(recwarn):
+    data = {"a": [1, 2], "b": {"c": 3}}
+
+    Wildcard().find(data["a"])
+    Wildcard().update(data["a"], 0)
+    Wildcard().filter(lambda value: False, data["a"])
+    Wildcard().find(data)
+
+    assert not recwarn.list
+
+
+def test_internal_slices_never_trigger_the_deprecation(recwarn):
+    with pytest.warns(DeprecationWarning):
+        path = Fields("*")
+    recwarn.clear()
+
+    path.find([1, 2])
+    path.update([1, 2], 0)
+    path.filter(lambda value: False, [1, 2])
+
+    assert not recwarn.list

@@ -10,6 +10,7 @@ from jsonpath_ng.jsonpath import Index
 from jsonpath_ng.jsonpath import Root
 from jsonpath_ng.jsonpath import Slice
 from jsonpath_ng.jsonpath import This
+from jsonpath_ng.jsonpath import Wildcard
 
 
 @pytest.mark.parametrize(
@@ -19,7 +20,10 @@ from jsonpath_ng.jsonpath import This
         (
             "$.store.book[*].author",
             Child(
-                Child(Child(Child(Root(), Fields("store")), Fields("book")), Slice()),
+                Child(
+                    Child(Child(Root(), Fields("store")), Fields("book")),
+                    Wildcard(),
+                ),
                 Fields("author"),
             ),
         ),
@@ -28,7 +32,7 @@ from jsonpath_ng.jsonpath import This
         ("$..author", Descendants(Root(), Fields("author"))),
         #
         # All things in the store
-        ("$.store.*", Child(Child(Root(), Fields("store")), Fields("*"))),
+        ("$.store.*", Child(Child(Root(), Fields("store")), Wildcard())),
         #
         # The price of everything in the store
         (
@@ -75,7 +79,7 @@ from jsonpath_ng.jsonpath import This
         ),
         #
         # All members of JSON structure
-        ("$..*", Descendants(Root(), Fields("*"))),
+        ("$..*", Descendants(Root(), Wildcard())),
     ],
 )
 def test_goessner_examples(string, parsed):

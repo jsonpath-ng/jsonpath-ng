@@ -76,9 +76,9 @@ Basic examples:
 
     # You can also build expressions directly quite easily
     >>> from jsonpath_ng.jsonpath import Fields
-    >>> from jsonpath_ng.jsonpath import Slice
+    >>> from jsonpath_ng.jsonpath import Wildcard
 
-    >>> parse('foo[*].baz') == Fields('foo').child(Slice()).child(Fields('baz'))
+    >>> parse('foo[*].baz') == Fields('foo').child(Wildcard()).child(Fields('baz'))
     True
 
 
@@ -173,7 +173,7 @@ easy to do so directly, and here are some examples:
 -  ``Fields('foo', 'bar')``
 -  ``Index(42)``
 -  ``Child(Fields('foo'), Index(42))``
--  ``Where(Slice(), Fields('subfield'))``
+-  ``Where(Wildcard(), Fields('subfield'))``
 -  ``Descendants(jsonpath, jsonpath)``
 
 
@@ -261,8 +261,8 @@ Example with data:
 ..  code-block:: json
 
     {
-        'cow': 'foo',
-        'fish': 'bar'
+        "cow": "foo",
+        "fish": "bar"
     }
 
 | ``cow + fish`` returns ``cowfish``
@@ -279,9 +279,9 @@ Example with data:
 
 ..  code-block:: json
 
-    {'objects': [
-        {'cow': 2, 'cat': 3},
-        {'cow': 4, 'cat': 6}
+    {"objects": [
+        {"cow": 2, "cat": 3},
+        {"cow": 4, "cat": 6}
     ]}
 
 | ``$.objects[\*].cow + $.objects[\*].cat`` returns ``[6, 9]``
@@ -306,6 +306,7 @@ This package is authored and maintained by:
 
 -  `Kenn Knowles <https://github.com/kennknowles>`__
 -  `Tomas Aparicio <https://github.com/h2non>`__
+-  `Kurt McKee <https://github.com/kurtmckee>`__
 
 with the help of patches submitted by `these contributors <https://github.com/jsonpath-ng/jsonpath-ng/graphs/contributors>`__.
 

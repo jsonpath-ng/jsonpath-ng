@@ -15,3 +15,5 @@ __pycache__/
 /htmlcov/
 
 *.egg-info/
+
+/requirements/*/poetry.lock
