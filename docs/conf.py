@@ -12,6 +12,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "jsonpath-ng"
+copyright = "2013, jsonpath-ng contributors"
 
 # Extract the project version.
 pyproject_ = pathlib.Path(__file__).parent.parent / "pyproject.toml"

@@ -306,6 +306,7 @@ This package is authored and maintained by:
 
 -  `Kenn Knowles <https://github.com/kennknowles>`__
 -  `Tomas Aparicio <https://github.com/h2non>`__
+-  `Kurt McKee <https://github.com/kurtmckee>`__
 
 with the help of patches submitted by `these contributors <https://github.com/jsonpath-ng/jsonpath-ng/graphs/contributors>`__.
 
