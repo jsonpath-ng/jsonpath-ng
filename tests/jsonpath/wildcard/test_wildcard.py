@@ -123,5 +123,5 @@ def test_wildcard_text_form_and_equality():
     assert repr(Wildcard()) == "Wildcard()"
     assert Wildcard() == Wildcard()
     assert hash(Wildcard()) == hash(Wildcard())
-    assert Wildcard() != Slice()
+    assert Wildcard() != Slice._compliant_constructor()
     assert Wildcard() != Fields("a")

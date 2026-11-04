@@ -2,6 +2,8 @@ import pytest
 
 import jsonpath_ng
 import jsonpath_ng.ext
+from jsonpath_ng.jsonpath import Child
+from jsonpath_ng.jsonpath import Root
 
 parsers = pytest.mark.parametrize(
     "parse",
@@ -60,6 +62,79 @@ def test_find_wildcard_selects_object_member_values(parse):
 @parsers
 def test_find_slice_with_parameters_selects_nothing_from_objects(parse):
     assert parse("$.o[0:2]").find({"o": {"x": 1, "y": 2}}) == []
+
+
+@parsers
+@pytest.mark.parametrize("query", ("$[:]", "$[::]", "$.o[:]", "$.o[::]"))
+def test_find_empty_slice_selects_nothing_from_objects(parse, query):
+    # RFC 9535 section 2.3.4.2: a slice selects nothing from a non-array.
+    # (`[*]` is the selector that selects the members of an object.)
+    assert parse(query).find({"x": 1, "y": 2, "o": {"x": 1, "y": 2}}) == []
+
+
+@parsers
+@pytest.mark.parametrize("query", ("$[:]", "$[::]"))
+def test_find_empty_slice_selects_every_array_element(parse, query):
+    matches = parse(query).find([1, 2, 3])
+
+    assert [match.value for match in matches] == [1, 2, 3]
+    assert [str(match.full_path) for match in matches] == ["[0]", "[1]", "[2]"]
+
+
+@parsers
+def test_find_empty_slice_in_descendants_skips_object_members(parse):
+    data = {"a": [1, 2], "o": {"x": 3, "y": [4]}}
+
+    assert [match.value for match in parse("$..[:]").find(data)] == [1, 2, 4]
+
+
+@parsers
+@pytest.mark.parametrize("query", ("$.o[:]", "$.o[::]"))
+def test_update_empty_slice_does_not_change_objects(parse, query):
+    data = {"o": {"x": 1, "y": 2}, "l": [1, 2]}
+
+    assert parse(query).update(data, 0) == {"o": {"x": 1, "y": 2}, "l": [1, 2]}
+
+
+@parsers
+@pytest.mark.parametrize("query", ("$.l[:]", "$.l[::]"))
+def test_update_empty_slice_sets_every_array_element(parse, query):
+    data = {"o": {"x": 1, "y": 2}, "l": [1, 2]}
+
+    assert parse(query).update(data, 0) == {"o": {"x": 1, "y": 2}, "l": [0, 0]}
+
+
+@parsers
+@pytest.mark.parametrize("query", ("$.o[:]", "$.o[::]"))
+def test_filter_empty_slice_removes_nothing_from_objects(parse, query):
+    data = {"o": {"x": 1, "y": 2}}
+
+    assert parse(query).filter(lambda value: True, data) == {"o": {"x": 1, "y": 2}}
+
+
+@parsers
+@pytest.mark.parametrize("query", ("$.l[:]", "$.l[::]"))
+def test_filter_empty_slice_removes_array_elements(parse, query):
+    data = {"l": [1, 2, 3]}
+
+    assert parse(query).filter(lambda value: value != 2, data) == {"l": [2]}
+
+
+@parsers
+def test_empty_slice_is_not_equal_to_a_hand_built_slice(parse):
+    # A hand-built `Slice()` still acts as a wildcard (and is deprecated),
+    # so it must not compare equal to the RFC-compliant parsed slice.
+    with pytest.warns(DeprecationWarning):
+        hand_built = jsonpath_ng.Slice()
+
+    assert parse("$[:]") != Child(Root(), hand_built)
+    assert parse("$[::]") != Child(Root(), hand_built)
+
+
+@parsers
+def test_empty_slices_compare_equal_when_both_are_parsed(parse):
+    assert parse("$[:]") == parse("$[::]")
+    assert hash(parse("$[:]")) == hash(parse("$[::]"))
 
 
 @parsers
@@ -223,4 +298,4 @@ def test_text_form_of_a_slice_parses_back_to_it(parse, expression):
 
 
 def test_text_form_of_an_empty_slice_is_not_a_wildcard():
-    assert str(jsonpath_ng.Slice()) == "[:]"
+    assert str(jsonpath_ng.Slice._compliant_constructor()) == "[:]"

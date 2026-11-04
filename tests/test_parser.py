@@ -25,7 +25,7 @@ parser_test_cases = (
     ("baz,bizzle", Fields("baz", "bizzle")),
     ("[1]", Index(1)),
     ("[1:]", Slice(start=1)),
-    ("[:]", Slice()),
+    ("[:]", Slice._compliant_constructor()),
     ("[*]", Wildcard()),
     ("[:2]", Slice(end=2)),
     ("[1:2]", Slice(start=1, end=2)),

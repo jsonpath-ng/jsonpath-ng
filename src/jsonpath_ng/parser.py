@@ -227,7 +227,7 @@ class JsonPathParser:
     def p_slice(self, p: _Production) -> None:  # Currently does not support `step`
         """slice : maybe_int ':' maybe_int
         | maybe_int ':' maybe_int ':' maybe_int"""
-        p[0] = Slice(*typing.cast(list[int | None], p[1::2]))
+        p[0] = Slice._compliant_constructor(*typing.cast(list[int | None], p[1::2]))
 
     def p_maybe_int(self, p: _Production) -> None:
         """maybe_int : NUMBER

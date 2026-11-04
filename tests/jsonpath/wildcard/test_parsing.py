@@ -40,7 +40,7 @@ def test_unquoted_star_parses_to_wildcard(parse, expression, expected):
 
 @parsers
 def test_empty_slice_is_not_a_wildcard_node(parse):
-    assert parse("$[:]") == Child(Root(), Slice())
+    assert parse("$[:]") == Child(Root(), Slice._compliant_constructor())
     assert parse("$[:]") != parse("$[*]")
 
 

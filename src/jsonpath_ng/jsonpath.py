@@ -808,7 +808,7 @@ class Fields(JSONPath):
     def _find_base(self, datum: typing.Any, create: bool) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         if self._is_wildcard_on_array(datum.value):
-            return Slice().find(datum)
+            return _find_array_elements(datum)
         field_data = [
             self.get_field_datum(datum, field, create)
             for field in self.reified_fields(datum)
@@ -817,7 +817,7 @@ class Fields(JSONPath):
 
     def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         if self._deprecated_wildcard_use and isinstance(data, list):
-            return Slice().update(data, val)
+            return _update_array_elements(data, val)
         if not hasattr(data, "get"):
             return data
         return self._update_base(data, val, create=False)
@@ -843,7 +843,7 @@ class Fields(JSONPath):
 
     def filter(self, fn: FilterFunction, data: Container) -> Container:
         if self._deprecated_wildcard_use and isinstance(data, list):
-            return Slice().filter(fn, data)
+            return _filter_array_elements(fn, data)
         if data is not None and isinstance(data, dict):
             for field in self.reified_fields(DatumInContext.wrap(data)):
                 if field in data:
@@ -903,7 +903,7 @@ class Wildcard(JSONPath):
     def find(self, datum: typing.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         if isinstance(datum.value, (list, tuple)):
-            return Slice().find(datum)
+            return _find_array_elements(datum)
         if isinstance(datum.value, dict) and auto_id_field is None:
             # Without auto ids, every member exists, so skip the per-name lookups.
             make_path = Fields._compliant_constructor
@@ -922,7 +922,7 @@ class Wildcard(JSONPath):
 
     def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         if isinstance(data, list):
-            return Slice().update(data, val)
+            return _update_array_elements(data, val)
         if not hasattr(data, "get"):
             return data
         return self.update_or_create(data, val)
@@ -936,7 +936,7 @@ class Wildcard(JSONPath):
 
     def filter(self, fn: FilterFunction, data: Container) -> Container:
         if isinstance(data, list):
-            return Slice().filter(fn, data)
+            return _filter_array_elements(fn, data)
         if isinstance(data, dict):
             for key, value in list(data.items()):
                 if fn(value):
@@ -963,8 +963,7 @@ class Index(JSONPath):
 
     WARNING: If the datum is None or not long enough,
     it will not crash but will not match anything.
-    NOTE: For the concrete syntax of `[*]`,
-    the abstract syntax is a Slice() with no parameters (equiv to `[:]`).
+    NOTE: For the concrete syntax of `[*]`, the abstract syntax is `Wildcard()`.
     """
 
     def __init__(self, *indices: int) -> None:
@@ -1075,25 +1074,55 @@ class Slice(JSONPath):
     """
     JSONPath matching a slice of an array.
 
-    The wildcard ``[*]`` (a slice with no parameters) matches all the elements
-    of an array and all the member values of an object.
-    Slices match nothing when applied to a value that is not an array,
-    and the wildcard matches nothing when applied to a scalar value.
+    RFC 9535, section 2.3.4.2: a slice selects nothing from a value
+    that is not an array, so ``[:]`` matches every element of an array
+    and nothing from an object or a scalar.
+    Use ``Wildcard()`` to match every child of an object or an array.
     """
+
+    # True only for a hand-built `Slice()` with no parameters,
+    # which is a deprecated wildcard when applied to an object.
+    # A slice from a parsed query is never interpreted a wildcard.
+    _deprecated_wildcard_use: bool
 
     def __init__(
         self, start: int | None = None, end: int | None = None, step: int | None = None
     ) -> None:
+        self._deprecated_wildcard_use = start is None and end is None and step is None
+        if self._deprecated_wildcard_use:
+            msg = (
+                "A `Slice()` with no parameters will select the members of an object. "
+                "In version 2.0.0, `Slice()` will only select items from arrays. "
+                "Use `Wildcard()` to select every child."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self.start = start
         self.end = end
         self.step = step
 
+    @classmethod
+    def _compliant_constructor(
+        cls, start: int | None = None, end: int | None = None, step: int | None = None
+    ) -> Slice:
+        """
+        Create a slice that selects nothing from an object.
+
+        This method solely exists to support instantiation
+        without triggering a wildcard-related DeprecationWarning.
+        This method will be removed in version 2.0.0.
+        """
+
+        node = cls.__new__(cls)
+        node.start = start
+        node.end = end
+        node.step = step
+        node._deprecated_wildcard_use = False
+        return node
+
     def find(self, datum: typing.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
 
-        is_wildcard = self.start is None and self.end is None and self.step is None
-
-        if is_wildcard and isinstance(datum.value, dict):
+        if self._deprecated_wildcard_use and isinstance(datum.value, dict):
             return [
                 DatumInContext(
                     value, path=Fields._compliant_constructor(field), context=datum
@@ -1107,11 +1136,8 @@ class Slice(JSONPath):
         if self.step == 0:
             return []
 
-        if is_wildcard:
-            return [
-                DatumInContext(child, path=Index(i), context=datum)
-                for i, child in enumerate(datum.value)
-            ]
+        if self.start is None and self.end is None and self.step is None:
+            return _find_array_elements(datum)
 
         return [
             DatumInContext(datum.value[i], path=Index(i), context=datum)
@@ -1125,7 +1151,7 @@ class Slice(JSONPath):
 
     def filter(self, fn: FilterFunction, data: Container) -> Container:
         if isinstance(data, dict):
-            if self.start is None and self.end is None and self.step is None:
+            if self._deprecated_wildcard_use:
                 for key, value in list(data.items()):
                     if fn(value):
                         del data[key]
@@ -1163,8 +1189,18 @@ class Slice(JSONPath):
         return f"[{':'.join(elements) or ':'}]"
 
     def __repr__(self) -> str:
+        constructor = self.__class__.__name__
+        if (
+            not self._deprecated_wildcard_use
+            and self.start is None
+            and self.end is None
+            and self.step is None
+        ):
+            # Distinguish a slice that selects nothing from an object
+            # from the deprecated wildcard.
+            constructor += "._compliant_constructor"
         return "{}(start={!r},end={!r},step={!r})".format(
-            self.__class__.__name__, self.start, self.end, self.step
+            constructor, self.start, self.end, self.step
         )
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -1173,10 +1209,42 @@ class Slice(JSONPath):
             and other.start == self.start
             and self.end == other.end
             and other.step == self.step
+            and self._deprecated_wildcard_use == other._deprecated_wildcard_use
         )
 
     def __hash__(self) -> int:
-        return hash((self.start, self.end, self.step))
+        return hash((self.start, self.end, self.step, self._deprecated_wildcard_use))
+
+
+def _find_array_elements(datum: DatumInContext) -> list[DatumInContext]:
+    """Find every element of the array in `datum`."""
+
+    return [
+        DatumInContext(child, path=Index(i), context=datum)
+        for i, child in enumerate(datum.value)
+    ]
+
+
+def _update_array_elements(data: list[typing.Any], val: typing.Any) -> list[typing.Any]:
+    """Update every element of `data` in place."""
+
+    return typing.cast(
+        list[typing.Any],
+        Index(*range(len(data)))._update_base(data, val, create=False),
+    )
+
+
+def _filter_array_elements(
+    fn: FilterFunction, data: list[typing.Any]
+) -> list[typing.Any]:
+    """Remove from `data`, in place, every element for which `fn` is true."""
+
+    # `fn` sees each original element once, in order,
+    # and the work stays linear however many elements are removed.
+    kept = [value for value in data if not fn(value)]
+    if len(kept) != len(data):
+        data[:] = kept
+    return data
 
 
 def _create_list_key(
