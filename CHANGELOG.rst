@@ -10,6 +10,70 @@ CHANGELOG
 
 ..  scriv-insert-here
 
+.. _changelog-1.16.0:
+
+1.16.0 - 2026-11-04
+===================
+
+Breaking changes
+----------------
+
+*   Parse an unquoted ``*`` to the new ``Wildcard()`` node.
+
+    ``$.*``, ``$[*]``, and ``$..*`` used to parse to ``Fields('*')`` or ``Slice()``.
+    Code that compares or inspects these parsed expressions must be updated.
+    The results of finding, updating, and filtering are unchanged.
+
+    This change can only affect code that first parses a JSONPath string
+    containing an unquoted wildcard character (``*``)
+    and then interacts with the resulting AST.
+
+Added
+-----
+
+*   Add a ``Wildcard`` node that selects every child of an object or array.
+
+Fixed
+-----
+
+*   Treat a quoted ``*`` as a field name, not as a wildcard.
+
+    Given an object like ``{"*": "multiply", "/": "divide"}``,
+    ``parse("$['*']").find(data)`` will now correctly return only ``["multiply"]``.
+
+*   Fix empty slices acting like wildcards that select member values of objects.
+
+    RFC 9535 says that a slice selects nothing from a value that is not an array.
+    Given ``{"x": 1}``, ``parse("$[:]").find(data)`` now correctly returns ``[]``.
+    The same applies to updating and filtering.
+
+    This may break code that relied on ``[:]`` or ``[::]`` selecting object members.
+    Use ``[*]`` to select the members of an object.
+
+Deprecated
+----------
+
+*   Deprecate interpreting ``Fields('*')`` as a wildcard.
+
+    ``Fields('*')`` continues to incorrectly act like a wildcard,
+    but in version 2.0.0 it will select only a field named ``*``.
+
+    Replace usages with ``Wildcard()``.
+
+*   Deprecate interpreting ``Slice()`` with no parameters as a wildcard.
+
+    ``Slice()`` continues to incorrectly select member values of an object,
+    but in version 2.0.0 it will select nothing from an object.
+
+    Replace usages with ``Wildcard()``.
+
+Documentation
+-------------
+
+*   Add Sphinx documentation, configured to build on Read the Docs.
+*   Fix the JSON syntax of two README examples.
+*   Remove several v1.5.0 changelog items that were duplicated from v1.4.3.
+
 .. _changelog-1.15.0:
 
 1.15.0 - 2026-10-29
