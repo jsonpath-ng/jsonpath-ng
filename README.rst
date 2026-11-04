@@ -261,8 +261,8 @@ Example with data:
 ..  code-block:: json
 
     {
-        'cow': 'foo',
-        'fish': 'bar'
+        "cow": "foo",
+        "fish": "bar"
     }
 
 | ``cow + fish`` returns ``cowfish``
@@ -279,9 +279,9 @@ Example with data:
 
 ..  code-block:: json
 
-    {'objects': [
-        {'cow': 2, 'cat': 3},
-        {'cow': 4, 'cat': 6}
+    {"objects": [
+        {"cow": 2, "cat": 3},
+        {"cow": 4, "cat": 6}
     ]}
 
 | ``$.objects[\*].cow + $.objects[\*].cat`` returns ``[6, 9]``

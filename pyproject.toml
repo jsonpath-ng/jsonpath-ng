@@ -24,6 +24,8 @@ classifiers=[
 ]
 
 [project.urls]
+Documentation = "https://jsonpath-ng.readthedocs.io/en/latest/"
+Changelog = "https://jsonpath-ng.readthedocs.io/en/latest/changelog/"
 Source = "https://github.com/jsonpath-ng/jsonpath-ng"
 
 [project.scripts]
