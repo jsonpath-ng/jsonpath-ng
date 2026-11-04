@@ -1,0 +1,10 @@
+[tool.poetry]
+package-mode = false
+
+[project]
+name = "dependencies"
+requires-python = ">=3.11"
+dependencies = [
+    "sphinx",
+    "sphinx_issues",
+]

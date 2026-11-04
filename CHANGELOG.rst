@@ -49,7 +49,7 @@ Documentation
 Fixed
 -----
 
-*   Fix parsing in executables created by PyInstaller. (#320)
+*   Fix parsing in executables created by PyInstaller. (:issue:`320`)
 
     Since v1.10.0, PLY tables have been pre-generated to improve performance.
     However, PLY imports pre-generated modules via dynamic string lookups,
@@ -82,7 +82,7 @@ Documentation
 Added
 -----
 
-*   Support the RFC 9535 logical operators ``&&`` and ``||`` in filters. (#27)
+*   Support the RFC 9535 logical operators ``&&`` and ``||`` in filters. (:issue:`27`)
 
     For example, ``parse("$[?@.a == 1 || @.b == 2 && @.c == 3]")``.
 
@@ -199,7 +199,7 @@ Documentation
 Added
 -----
 
-*   Support a query on the right-hand side of a filter comparison. (#79)
+*   Support a query on the right-hand side of a filter comparison. (:issue:`79`)
 
     For example: ``$.items[?@.a == @.b]`` and ``$.items[?@.v == $.ref.v]``.
 
@@ -210,7 +210,7 @@ Added
 Fixed
 -----
 
-*   Resolve ``$`` to the root node inside a filter. (#66)
+*   Resolve ``$`` to the root node inside a filter. (:issue:`66`)
 
     Previously, ``$`` was incorrectly treated as an alias of ``@``.
     Use ``@`` to refer to the element being tested.
@@ -247,7 +247,7 @@ Breaking changes
 
     This change improves RFC 9535 compliance.
 
-*   Slices and the ``[*]`` wildcard no longer coerce scalars and objects into arrays. (#96)
+*   Slices and the ``[*]`` wildcard no longer coerce scalars and objects into arrays. (:issue:`96`)
 
     Previously, ``$[*]`` applied to ``"abc"`` or ``5`` would find the value itself,
     and ``$[*]`` applied to ``{"a": 1}`` would find the whole object.
@@ -279,20 +279,20 @@ Fixed
 
     These values now match nothing, as required by RFC 9535.
 
-*   Fix ``..[*]`` omitting the member values of objects. (#96)
+*   Fix ``..[*]`` omitting the member values of objects. (:issue:`96`)
 
-*   Fix ``*`` (used as a field) omitting the elements of arrays. (#11, #164)
+*   Fix ``*`` (used as a field) omitting the elements of arrays. (:issue:`11, 164`)
 
     ``$.*`` and ``$..*`` now find array elements as well as object member values.
 
     ``update()`` and ``filter()`` now also act on array elements for these wildcards.
 
-*   Fix a parse error when a filter follows ``..``, as in ``$..[?@.key]``. (#46)
+*   Fix a parse error when a filter follows ``..``, as in ``$..[?@.key]``. (:issue:`46`)
 
     The path now parses and selects every matching array element or object member value
     at any depth, as required by RFC 9535.
 
-*   Allow filters to compare against JSON ``null`` values (``[?(@.v == null)]``). (#49)
+*   Allow filters to compare against JSON ``null`` values (``[?(@.v == null)]``). (:issue:`49`)
 
     An unquoted ``null`` no longer matches the string ``"null"``.
     To compare a value to the word ``"null"``, quote it (``[?(@.v == 'null')]``).
@@ -354,7 +354,7 @@ Deprecated
 Changed
 -------
 
-*   Use pre-generated PLY lex/parse tables. (#121)
+*   Use pre-generated PLY lex/parse tables. (:issue:`121`)
 
     Base parser instantiation is now over 20 times faster,
     and extended parser instantiation is over 50 times faster.
@@ -407,7 +407,7 @@ Project administration
 Fixed
 -----
 
-- Add ``requires-python`` to the project metadata in ``pyproject.toml``. (#266)
+- Add ``requires-python`` to the project metadata in ``pyproject.toml``. (:issue:`266`)
 
   This ensures the package can only be installed on supported Python versions.
 
@@ -433,25 +433,25 @@ Added
 Fixed
 -----
 
-- Ignore non-mapping values when updating named fields instead of raising ``TypeError`` (#104).
+- Ignore non-mapping values when updating named fields instead of raising ``TypeError``. (:issue:`104`)
 
 - Return no matches for negative array indices beyond the start of an array,
-  matching the behavior of out-of-range positive indices (#203).
+  matching the behavior of out-of-range positive indices. (:issue:`203`)
 
 - Fix extended filter equality against an integer literal truncating float values,
-  so ``[?(@.v = 0)]`` no longer matches an element with ``v = 0.6`` (#227).
+  so ``[?(@.v = 0)]`` no longer matches an element with ``v = 0.6``. (:issue:`227`)
 
-- ``update()`` with an in-place callback returning ``None`` no longer overwrites the field with ``None`` (#163)
+- ``update()`` with an in-place callback returning ``None`` no longer overwrites the field with ``None``. (:issue:`163`)
 
-- Fix an ``AttributeError`` that occurs when an ``Index`` instance is hashed. (#224)
+- Fix an ``AttributeError`` that occurs when an ``Index`` instance is hashed. (:issue:`224`)
 
 - ``Index.find`` no longer raises ``KeyError`` when applied to a dict
   (e.g. ``$.*[0]``, where ``*`` matched a dict value).
-  It now matches nothing, as the docstring promises. (#93)
+  It now matches nothing, as the docstring promises. (:issue:`93`)
 
 - Fix extended parser handling of field names that start with ``true`` or ``false``.
 
-- Stop serializing ``Child`` paths with surrounding parentheses. (#215)
+- Stop serializing ``Child`` paths with surrounding parentheses. (:issue:`215`)
 
 - Avoid mutating dictionaries while evaluating extended filter expressions.
 
@@ -494,9 +494,9 @@ Fixed
 -----
 
 - ``[*]`` now correctly returns results when applied to a ``False`` or other falsy non-``None`` value;
-  previously it returned an empty list (#198).
-- ``update()`` no longer raises ``TypeError`` when a value in the data structure is a boolean (#73).
-- ``update_or_create()`` now works correctly when the root data structure is a list (#108).
+  previously it returned an empty list. (:issue:`198`)
+- ``update()`` no longer raises ``TypeError`` when a value in the data structure is a boolean. (:issue:`73`)
+- ``update_or_create()`` now works correctly when the root data structure is a list. (:issue:`108`)
 - Fix single constant case
 - Update field filter to resolve wildcard path issue
 - Vendor copy of ply and remove pickle support from the vendored copy to resolve `CVE-2025-56005 <https://nvd.nist.gov/vuln/detail/CVE-2025-56005>`__
@@ -535,7 +535,7 @@ Removed
 - Remove Python 3.7 support
 - Only construct the parse table once
 - updated test for ``jsonpath.py`` changes
-- fix for Updating a json object fails if the value of a key is boolean #73
+- fix for Updating a json object fails if the value of a key is boolean (:issue:`73`)
 - Add Codespaces configuration
 - Add ``.editorconfig``
 - Fix a GitHub workflow schema issue
@@ -601,8 +601,8 @@ Removed
 - Enclose field names containing literals in quotes
 - Add note about extensions
 - Remove documentation status link
-- Update supported versions in setup.py
-- Add LICENSE file
+- Update supported versions in ``setup.py``
+- Add ``LICENSE`` file
 - Code cleanup
 - Remove dependency on six
 - Update build status badge
@@ -612,29 +612,29 @@ Removed
 - Escape back slashes in tests to avoid DeprecationWarning.
 - Use raw strings for regular expressions to avoid DeprecationWarning.
 - refactor(package): remove dependency for decorator
-- Merge pull request #128 from michaelmior/hashable
+- Merge pull request :pr:`128` from michaelmior/hashable
 - Make path instances hashable
-- Merge pull request #122 from snopoke/snopoke-patch-1
+- Merge pull request :pr:`122` from snopoke/snopoke-patch-1
 - Add more detail to filter docs.
 - remove incorrect parenthesis in filter examples
-- Merge pull request #119 from snopoke/patch-1
+- Merge pull request :pr:`119` from snopoke/patch-1
 - add 'sub' line with function param names
 - readme formatting fixes
 - chore(history): update
-- Update **init**.py
+- Update ``__init__.py``
 
 .. _changelog-1.5.3:
 
 1.5.3 - 2021-07-05
 ==================
 
-- Update **init**.py
-- Update setup.py
-- Merge pull request #72 from kaapstorm/find_or_create
+- Update ``__init__.py``
+- Update ``setup.py``
+- Merge pull request :pr:`72` from kaapstorm/find_or_create
 - Tests
 - Add ``update_or_create()`` method
-- Merge pull request #68 from kaapstorm/example_tests
-- Merge pull request #70 from kaapstorm/exceptions
+- Merge pull request :pr:`68` from kaapstorm/example_tests
+- Merge pull request :pr:`70` from kaapstorm/exceptions
 - Add/fix ``__eq__()``
 - Add tests based on Stefan Goessner's examples
 - Tests
@@ -645,10 +645,10 @@ Removed
 1.5.2 - 2020-09-07
 ==================
 
-- Merge pull request #41 from josephwhite13/allow-dictionary-filtering
-- Merge pull request #48 from back2root/master
+- Merge pull request :pr:`41` from josephwhite13/allow-dictionary-filtering
+- Merge pull request :pr:`48` from back2root/master
 - Check for null value.
-- Merge pull request #40 from memborsky/add-regular-expression-contains-support
+- Merge pull request :pr:`40` from memborsky/add-regular-expression-contains-support
 - feat: support regular expression for performing contains (=~) filtering
 - if datum.value is a dictionary, filter on the list of values
 
@@ -666,46 +666,31 @@ Removed
 ==================
 
 - feat(version): bump to 1,5.0
-- Merge pull request #13 from dcreemer/master
+- Merge pull request :pr:`13` from dcreemer/master
 - fix(travis): remove python 3.4 (deprecated)
 - refactor(docs): delete coverage badge
-- Merge pull request #25 from rahendatri/patch-1
-- Merge pull request #26 from guandalf/contains_operator
-- Merge pull request #31 from borysvorona/master
+- Merge pull request :pr:`25` from rahendatri/patch-1
+- Merge pull request :pr:`26` from guandalf/contains_operator
+- Merge pull request :pr:`31` from borysvorona/master
 - refactor(travis): update python versions
-- Merge pull request #34 from dchourasia/patch-1
-- Updated Filter.py to implement update function
+- Merge pull request :pr:`34` from dchourasia/patch-1
+- Updated ``Filter.py`` to implement update function
 - added hook for catching null value instead of empty list in path
 - Ignore vscode folder
 - Contains operator implementation
-- Update requirements-dev.txt
+- Update ``requirements-dev.txt``
 - setuptools>=18.5
 - update setuptools
 - update cryptography
 - new version of cryptography requires it
 - entry point conflict with https://pypi.org/project/jsonpath/
-- add str() method
+- add ``str()`` method
 - clean up
-- remove extra print()
+- remove extra ``print()``
 - refactor(docs): remove codesponsor
 - feat(docs): add sponsor banner
-- Update .travis.yml
+- Update ``.travis.yml``
 - feat(History): add History file
-- fix(travis-ci): ignore versions
-- feat(requirements): add missing pytest-cov dependency
-- refactor(requirements): use version constraint
-- fix: remove .cache files
-- feat: add required files
-- fix(travis-ci): install proper packages
-- refactor(setup.py): update description
-- refactor(docs): remove downloads badge
-- fix(tests): pass unit tests
-- feat(docs): add TravisCI and PyPI badges
-- Merge pull request #2 from tomas-fp/master
-- feat(docs): update readme notes
-- feat(setup): increase version
-- Merge pull request #1 from kmmbvnr/patch-1
-- Fix github url on pypi
 
 .. _changelog-1.4.3:
 
@@ -715,15 +700,15 @@ Removed
 - fix(travis-ci): ignore versions
 - feat(requirements): add missing pytest-cov dependency
 - refactor(requirements): use version constraint
-- fix: remove .cache files
+- fix: remove ``.cache`` files
 - feat: add required files
 - fix(travis-ci): install proper packages
-- refactor(setup.py): update description
+- refactor(``setup.py``): update description
 - refactor(docs): remove downloads badge
 - fix(tests): pass unit tests
 - feat(docs): add TravisCI and PyPI badges
-- Merge pull request #2 from tomas-fp/master
+- Merge pull request :pr:`2` from tomas-fp/master
 - feat(docs): update readme notes
 - feat(setup): increase version
-- Merge pull request #1 from kmmbvnr/patch-1
+- Merge pull request :pr:`1` from kmmbvnr/patch-1
 - Fix github url on pypi
