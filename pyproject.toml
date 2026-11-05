@@ -54,15 +54,6 @@ dev = [
 ]
 
 
-# codespell
-# ---------
-
-[tool.codespell]
-skip = '.git,.gitignore,.gitattributes,*.pdf,*.svg,*.css,*.min.*,_ply,./.venv,./docs/rfc9535'
-check-hidden = true
-ignore-words-list = 'nd'
-
-
 # coverage
 # --------
 
