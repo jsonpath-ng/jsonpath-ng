@@ -178,6 +178,13 @@ def test_filter_removes_every_selected_element(parse, expression, expected):
 
 
 @parsers
+def test_filter_removes_the_first_half_of_a_long_array(parse):
+    path = parse("$[%s]" % ",".join(str(index) for index in range(1000)))
+
+    assert path.filter(lambda value: True, list(range(2000))) == list(range(1000, 2000))
+
+
+@parsers
 def test_filter_function_sees_original_elements(parse):
     data = [1, 2, 3]
     seen = []
