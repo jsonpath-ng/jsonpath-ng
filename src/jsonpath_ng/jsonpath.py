@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 import re
 import typing
@@ -1044,9 +1045,21 @@ class Index(JSONPath):
             for index in self.indices
             if -data_length <= index < data_length
         )
-        indices_to_remove = (position for position in positions if fn(data[position]))
-        for position in sorted(indices_to_remove, reverse=True):
-            del data[position]
+        positions_to_remove = [position for position in positions if fn(data[position])]
+
+        if len(positions_to_remove) <= 64:
+            # Removing elements with `del` is fastest when only a few are removed,
+            # but removing many elements near the front of a long list is quadratic.
+            # Rebuilding the list once is linear, but costs more than a few deletions.
+            # Measured crossover is ~130-170 removals,
+            # so 64 is chosen to stay below that threshold.
+            for position in sorted(positions_to_remove, reverse=True):
+                del data[position]
+        else:
+            keep = [True] * data_length
+            for position in positions_to_remove:
+                keep[position] = False
+            data[:] = itertools.compress(data, keep)
         return data
 
     def __eq__(self, other: typing.Any) -> bool:
