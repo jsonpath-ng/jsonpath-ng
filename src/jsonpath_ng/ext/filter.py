@@ -237,28 +237,37 @@ class Filter(JSONPath):
         return self._update_with_root(data, val, data)
 
     def _update_with_root(self, data, val, root):
-        if type(data) is list:
-            if self._references_root():
-                # Evaluate `$` against the root, as `find()` does.
-                parent = self._datum(data, root)
-                for index, item in enumerate(data):
-                    candidate = DatumInContext(item, path=Index(index), context=parent)
-                    if all(
-                        expression.find(candidate) for expression in self.expressions
-                    ):
-                        self._set(data, index, val)
-            else:
-                for index, item in enumerate(data):
-                    if all(expression.find(item) for expression in self.expressions):
-                        self._set(data, index, val)
+        if isinstance(data, list):
+            candidates = enumerate(data)
+            make_path = Index
+        elif isinstance(data, dict):
+            # Snapshot the members so that callables can add or remove members.
+            candidates = list(data.items())
+            make_path = Fields._compliant_constructor
+        else:
+            return data
+
+        if self._references_root():
+            # Evaluate `$` against the root, as `find()` does.
+            parent = self._datum(data, root)
+            for key, item in candidates:
+                candidate = DatumInContext(item, path=make_path(key), context=parent)
+                if all(expression.find(candidate) for expression in self.expressions):
+                    self._set(data, key, val)
+        else:
+            for key, item in candidates:
+                if all(expression.find(item) for expression in self.expressions):
+                    self._set(data, key, val)
         return data
 
     @staticmethod
-    def _set(data, index, val):
+    def _set(data, key, val):
+        """Set the member of *data* at *key* (an index or a field name)."""
+
         if callable(val):
-            val(data[index], data, index)
+            val(data[key], data, key)
         else:
-            data[index] = val
+            data[key] = val
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.expressions!r})"
