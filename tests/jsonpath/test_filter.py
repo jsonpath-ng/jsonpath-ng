@@ -41,6 +41,98 @@ def test_filter_returns_lists(datum, expected_values):
     assert_value_equality(results, expected_values)
 
 
+SCORES_ARRAY = [{"score": 90}, {"score": 50}, {"score": 85}]
+SCORES_OBJECT = {
+    "first": {"score": 90},
+    "second": {"score": 50},
+    "third": {"score": 85},
+}
+
+
+@pytest.mark.parametrize(
+    "path, datum, expected",
+    [
+        pytest.param(
+            "$[?@.score >= 85]",
+            SCORES_ARRAY,
+            ["X", {"score": 50}, "X"],
+            id="array-elements",
+        ),
+        pytest.param(
+            "$[?@.score >= 85]",
+            SCORES_OBJECT,
+            {"first": "X", "second": {"score": 50}, "third": "X"},
+            id="object-members",
+        ),
+        pytest.param(
+            "$.scores[?@.score >= 85]",
+            {"scores": SCORES_OBJECT, "other": 1},
+            {
+                "scores": {"first": "X", "second": {"score": 50}, "third": "X"},
+                "other": 1,
+            },
+            id="object-members-below-child-segment",
+        ),
+        pytest.param(
+            "$[?@.score > 100]", SCORES_ARRAY, SCORES_ARRAY, id="array-no-match"
+        ),
+        pytest.param(
+            "$[?@.score > 100]", SCORES_OBJECT, SCORES_OBJECT, id="object-no-match"
+        ),
+        pytest.param("$[?@ > 0]", 1, 1, id="int"),
+        pytest.param("$[?@ > 0]", "abc", "abc", id="str"),
+        pytest.param("$[?@ > 0]", None, None, id="null"),
+    ],
+)
+def test_update_replaces_selected_values(path, datum, expected):
+    """
+    Verify that update() replaces the values that the filter selects.
+
+    RFC 9535 section 2.3.5.2 says that a filter selector selects
+    the elements of an array and the member values of an object
+    for which the logical expression is true, and selects nothing from a primitive.
+    """
+
+    data = copy.deepcopy(datum)
+
+    result = jsonpath_ng.ext.parse(path).update(data, "X")
+
+    assert result is data
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "datum, expected_keys",
+    [
+        pytest.param(SCORES_ARRAY, [0, 2], id="array"),
+        pytest.param(SCORES_OBJECT, ["first", "third"], id="object"),
+    ],
+)
+def test_update_callable_receives_value_container_and_key(datum, expected_keys):
+    data = copy.deepcopy(datum)
+    calls = []
+
+    jsonpath_ng.ext.parse("$[?@.score >= 85]").update(
+        data, lambda value, container, key: calls.append((value, container, key))
+    )
+
+    assert [key for _, _, key in calls] == expected_keys
+    for value, container, key in calls:
+        assert container is data
+        assert value is data[key]
+
+
+def test_update_callable_may_add_members_to_an_object():
+    def add_copy(value, container, key):
+        container[f"{key}-copy"] = value
+
+    data = copy.deepcopy(SCORES_OBJECT)
+
+    jsonpath_ng.ext.parse("$[?@.score >= 85]").update(data, add_copy)
+
+    assert data.keys() == {"first", "second", "third", "first-copy", "third-copy"}
+
+
 @pytest.mark.parametrize(
     "path, datum, expected_values",
     [
@@ -124,6 +216,12 @@ NESTED_ROOT_DOC = {"k": 1, "o": {"p": [1, 2], "q": [[3]]}}
             "$.a[?($.x == 1)]", ROOT_DOC, {"x": 1, "a": ["X"] * 3}, id="root-true"
         ),
         pytest.param("$.a[?($.x == 2)]", ROOT_DOC, ROOT_DOC, id="root-false"),
+        pytest.param(
+            "$.a[?($.x == 1)]",
+            {"x": 1, "a": {"m": 1, "n": 2}},
+            {"x": 1, "a": {"m": "X", "n": "X"}},
+            id="object-members",
+        ),
         pytest.param("$.a[?!$.x]", ROOT_DOC, ROOT_DOC, id="negated-root"),
         pytest.param(
             "$.o.p[?($.k == 1)]",
@@ -134,7 +232,9 @@ NESTED_ROOT_DOC = {"k": 1, "o": {"p": [1, 2], "q": [[3]]}}
         pytest.param(
             "$.o..[?($.k == 1)]",
             NESTED_ROOT_DOC,
-            {"k": 1, "o": {"p": ["X", "X"], "q": ["X"]}},
+            # `o` is an object, so the filter selects its members `p` and `q`.
+            # They are replaced before their own children are visited.
+            {"k": 1, "o": {"p": "X", "q": "X"}},
             id="descendants",
         ),
         pytest.param(
