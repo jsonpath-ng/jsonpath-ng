@@ -198,7 +198,11 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
                 # represents as `None`. The regex operator is not part of RFC 9535
                 # and has always taken the bare word as the text of its pattern.
                 right = "null" if op == "=~" else None
-        p[0] = _filter.Expression(left, op, right)
+        p[0] = _filter.Expression(
+            typing.cast(JSONPath, left),
+            typing.cast(_filter.ExpressionOperator | None, op),
+            right,
+        )
 
     def p_singular_query_identifier(self, p: _ExtProduction) -> None:
         """singular_query : '@'
@@ -251,7 +255,11 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
 
     def p_expression_not(self, p: _ExtProduction) -> None:
         "expression : '!' jsonpath"
-        p[0] = _filter.Expression(p[2], p[1], None)
+        p[0] = _filter.Expression(
+            typing.cast(JSONPath, p[2]),
+            typing.cast(_filter.ExpressionOperator, p[1]),
+            None,
+        )
 
     # RFC 9535 section 2.3.5.1: `&&` binds more tightly than `||`.
     #
@@ -308,7 +316,7 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
 
     def p_filter(self, p: _ExtProduction) -> None:
         "filter : '?' expressions"
-        p[0] = _filter.Filter(p[2])
+        p[0] = _filter.Filter(typing.cast(list[JSONPath], p[2]))
 
     def p_jsonpath_filter(self, p: _ExtProduction) -> None:
         "jsonpath : jsonpath '[' filter ']'"
