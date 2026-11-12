@@ -103,8 +103,8 @@ force_single_line = true
 
 [tool.mypy]
 packages = "jsonpath_ng"
-# strict = true
-# warn_unreachable = true
+strict = true
+warn_unreachable = true
 sqlite_cache = true
 
 [[tool.mypy.overrides]]
