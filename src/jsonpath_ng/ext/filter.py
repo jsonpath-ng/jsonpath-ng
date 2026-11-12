@@ -156,13 +156,13 @@ class Filter(JSONPath):
     """The JSONQuery filter"""
 
     def __init__(self, expressions: t.Iterable[JSONPath]) -> None:
-        if not expressions:
+        self.expressions = list(expressions)
+        if not self.expressions:
             msg = (
                 "Creating a Filter with no expressions is deprecated. "
                 "It will raise an exception in version 2.0.0."
             )
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        self.expressions = list(expressions)
 
     def _references_root(self) -> bool:
         """Identify whether the filter expressions reference the root identifier."""
