@@ -12,6 +12,7 @@
 # under the License.
 
 import functools
+import typing as t
 
 from .. import DatumInContext
 from .. import JSONPath
@@ -24,14 +25,15 @@ class SortedThis(This):
     Concrete syntax is '`sorted`' or [\\field,/field].
     """
 
-    def __init__(self, expressions=None) -> None:
+    def __init__(self, expressions: list[tuple[JSONPath, bool]] | None = None) -> None:
         self.expressions = expressions
 
-    def _compare(self, left, right):
+    def _compare(self, left: t.Any, right: t.Any) -> int:
         left = DatumInContext.wrap(left)
         right = DatumInContext.wrap(right)
 
-        for expr in self.expressions:
+        # `_compare()` is only used as a sort key when `expressions` is truthy.
+        for expr in self.expressions:  # type: ignore[union-attr]
             field, reverse = expr
             l_datum = field.find(left)
             r_datum = field.find(right)
@@ -51,7 +53,11 @@ class SortedThis(This):
                 return -1 if reverse else 1
         return 0
 
-    def find(self, datum):
+    # NOTE: This returns a bare datum, not a list, when nothing is sorted;
+    # that contradicts `JSONPath.find()`, hence the `override` suppression.
+    def find(  # type: ignore[override]
+        self, datum: DatumInContext
+    ) -> list[DatumInContext] | DatumInContext:
         """Return sorted value of This if list or dict."""
         if isinstance(datum.value, dict) and self.expressions:
             return datum
@@ -63,13 +69,16 @@ class SortedThis(This):
             ]
         return datum
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return isinstance(other, SortedThis) and self.expressions == other.expressions
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.expressions!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
+        if not self.expressions:
+            return "`sorted`"
+
         expressions: list[str] = []
         for field, reverse in self.expressions:
             prefix = "\\" if reverse else "/"
@@ -83,7 +92,7 @@ class Len(JSONPath):
     Concrete syntax is '`len`'.
     """
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         try:
             value = len(datum.value)
@@ -92,13 +101,13 @@ class Len(JSONPath):
         else:
             return [DatumInContext(value, context=None, path=Len())]
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return isinstance(other, Len)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "`len`"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Len()"
 
 
@@ -107,7 +116,7 @@ class Keys(JSONPath):
     Concrete syntax is '`keys`'.
     """
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         try:
             value = list(datum.value.keys())
@@ -119,13 +128,13 @@ class Keys(JSONPath):
                 for i in range(0, len(datum.value))
             ]
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return isinstance(other, Keys)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "`keys`"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Keys()"
 
 
@@ -134,7 +143,7 @@ class Path(JSONPath):
     Concrete syntax is 'path`'.
     """
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
         try:
             value = str(datum.path)
@@ -143,11 +152,11 @@ class Path(JSONPath):
         else:
             return [DatumInContext(value, context=datum, path=Path())]
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return isinstance(other, Path)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "`path`"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Path()"

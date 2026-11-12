@@ -396,14 +396,19 @@ class Child(JSONPath):
         )
 
     def __str__(self) -> str:
-        # Special case: If the right side is a `SortedThis` or `Filter` instance,
+        # Special case: If the right side is a `Filter` instance
+        # or a `SortedThis` instance that is written as a bracketed list of sorts,
         # do not inject a period between the left and right sides.
         # Adding a period would corrupt the syntax and prevent re-parsing.
+        # A `SortedThis` with no expressions is written as `sorted`
+        # and needs the period, like any other name.
         # Current module design creates circular imports, so imports happen here.
         from .ext.filter import Filter
         from .ext.iterable import SortedThis
 
-        if isinstance(self.right, (SortedThis, Filter)):
+        if isinstance(self.right, Filter) or (
+            isinstance(self.right, SortedThis) and self.right.expressions
+        ):
             return f"{self.left}{self.right}"
 
         return f"{self.left}.{self.right}"

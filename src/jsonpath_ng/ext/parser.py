@@ -334,7 +334,7 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
 
     def p_jsonpath_sort(self, p: _ExtProduction) -> None:
         "jsonpath : jsonpath '[' sorts ']'"
-        sort = _iterable.SortedThis(p[3])
+        sort = _iterable.SortedThis(typing.cast(list[tuple[JSONPath, bool]], p[3]))
         p[0] = Child(typing.cast(JSONPath, p[1]), sort)
 
     def p_jsonpath_this(self, p: _ExtProduction) -> None:
