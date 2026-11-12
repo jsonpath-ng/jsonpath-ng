@@ -12,11 +12,12 @@
 # under the License.
 
 import operator
+import typing as t
 
 from .. import DatumInContext
 from .. import JSONPath
 
-OPERATOR_MAP = {
+OPERATOR_MAP: dict[str, t.Callable[[t.Any, t.Any], t.Any]] = {
     "+": operator.add,
     "-": operator.sub,
     "*": operator.mul,
@@ -25,14 +26,14 @@ OPERATOR_MAP = {
 
 
 class Operation(JSONPath):
-    def __init__(self, left, op, right) -> None:
+    def __init__(self, left: t.Any, op: str, right: t.Any) -> None:
         self.left = left
         self.op_symbol = op
         self.op = OPERATOR_MAP[op]
         self.right = right
 
-    def find(self, datum):
-        result = []
+    def find(self, datum: t.Any) -> list[DatumInContext]:
+        result: list[t.Any] = []
         if isinstance(self.left, JSONPath) and isinstance(self.right, JSONPath):
             left = self.left.find(datum)
             right = self.right.find(datum)
@@ -65,15 +66,15 @@ class Operation(JSONPath):
                 return []
         return [DatumInContext.wrap(r) for r in result]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({!r}{}{!r})".format(
             self.__class__.__name__, self.left, self.op_symbol, self.right
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.left} {self.op_symbol} {self.right}"
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return (
             isinstance(other, Operation)
             and self.left == other.left

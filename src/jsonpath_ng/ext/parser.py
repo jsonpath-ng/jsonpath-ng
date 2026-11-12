@@ -136,7 +136,7 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
             if isinstance(item, Fields) and len(item.fields) == 1:  # noqa
                 p[i] = item.fields[0]
 
-        p[0] = _arithmetic.Operation(p[1], p[2], p[3])
+        p[0] = _arithmetic.Operation(p[1], typing.cast(str, p[2]), p[3])
 
     def p_operator(self, p: _ExtProduction) -> None:
         """operator : '+'
