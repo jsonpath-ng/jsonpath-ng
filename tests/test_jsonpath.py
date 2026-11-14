@@ -139,6 +139,12 @@ update_test_cases = (
         3,
         {"foo": {"bar": 3, "flag": 1}, "baz": {"bar": 2}},
     ),
+    (
+        "foo[*] where baz",
+        {"foo": [{"baz": 1}, {"bar": 2}, {"baz": 3}]},
+        4,
+        {"foo": [4, {"bar": 2}, 4]},
+    ),
     #
     # WhereNot
     # --------
@@ -329,6 +335,26 @@ filter_test_cases = (
         {"flag": False, "foo": {"bar": 1, "baz": 2}},
         lambda d: True,
         {"flag": False, "foo": {"bar": 1}},
+    ),
+    # Where
+    (
+        "foo[*] where baz",
+        {"foo": [{"baz": 1}, {"bar": 2}, {"baz": 3}]},
+        lambda d: True,
+        {"foo": [{"bar": 2}]},
+    ),
+    (
+        "* where baz",
+        {"foo": {"baz": 1}, "bar": {"qux": 2}},
+        lambda d: True,
+        {"bar": {"qux": 2}},
+    ),
+    # WhereNot
+    (
+        "foo[*] wherenot baz",
+        {"foo": [{"baz": 1}, {"bar": 2}, {"bar": 3}]},
+        lambda d: True,
+        {"foo": [{"baz": 1}]},
     ),
 )
 

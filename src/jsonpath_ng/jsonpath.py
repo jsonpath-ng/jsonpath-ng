@@ -460,12 +460,14 @@ class Where(JSONPath):
 
     def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         for datum in self.find(data):
-            datum.path.update(data, val)
+            datum.full_path.update(data, val)
         return data
 
     def filter(self, fn: FilterFunction, data: Container) -> Container | None:
-        for datum in self.find(data):
-            datum.path.filter(fn, datum.value)
+        # Remove matches in reverse order so that deleting a list element
+        # does not shift the indices of the matches that remain.
+        for datum in reversed(self.find(data)):
+            datum.full_path.filter(fn, data)
         return data
 
     def __str__(self) -> str:
