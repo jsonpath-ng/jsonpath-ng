@@ -217,8 +217,8 @@ To use the extensions below you must import from ``jsonpath_ng.ext``.
 |              | - ``$.field.`split(sep, segment, maxsplit)```    |
 +--------------+--------------------------------------------------+
 | sorted       | - ``$.objects.`sorted```                         |
-|              | - ``$.objects[\\some_field]``                    |
-|              | - ``$.objects[\\some_field,/other_field]``       |
+|              | - ``$.objects[\some_field]``                     |
+|              | - ``$.objects[\some_field,/other_field]``        |
 +--------------+--------------------------------------------------+
 | filter       | - ``$.objects[?(@.some_field > 5)]``             |
 |              | - ``$.objects[?(@.some_field = "foobar")]``      |
@@ -284,7 +284,7 @@ Example with data:
         {"cow": 4, "cat": 6}
     ]}
 
-| ``$.objects[\*].cow + $.objects[\*].cat`` returns ``[6, 9]``
+| ``$.objects[*].cow + $.objects[*].cat`` returns ``[5, 10]``
 
 Other examples
 --------------
