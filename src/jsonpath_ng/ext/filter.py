@@ -24,9 +24,12 @@ from .. import Index
 from .. import JSONPath
 from .. import Root
 from .. import This
+from ..jsonpath import FilterFunction
 from .arithmetic import Operation
 
 StringOperator: t.TypeAlias = t.Literal["!=", "==", "=", "<=", "<", ">=", ">"]
+# The operators an `Expression` can have, besides `None` for an existence test.
+ExpressionOperator: t.TypeAlias = StringOperator | t.Literal["=~", "!"]
 
 OPERATOR_MAP: dict[
     StringOperator | t.Literal["=~"], t.Callable[[t.Any, t.Any], bool]
@@ -151,19 +154,19 @@ def _query_to_str(path: t.Any, leading: bool = True) -> str:
 class Filter(JSONPath):
     """The JSONQuery filter"""
 
-    def __init__(self, expressions) -> None:
-        if not expressions:
+    def __init__(self, expressions: t.Iterable[JSONPath]) -> None:
+        self.expressions = list(expressions)
+        if not self.expressions:
             msg = (
                 "Creating a Filter with no expressions is deprecated. "
                 "It will raise an exception in version 2.0.0."
             )
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        self.expressions = list(expressions)
 
     def _references_root(self) -> bool:
         """Identify whether the filter expressions reference the root identifier."""
 
-        paths_to_visit: list[JSONPath] = list(self.expressions)
+        paths_to_visit = list(self.expressions)
 
         while paths_to_visit:
             path = paths_to_visit.pop()
@@ -186,9 +189,12 @@ class Filter(JSONPath):
 
         return False
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         datum = DatumInContext.wrap(datum)
 
+        # `Any` keeps mypy from narrowing the keys to `int` or `str`.
+        candidates: t.Any
+        make_path: t.Callable[[t.Any], JSONPath]
         if isinstance(datum.value, dict):
             candidates = datum.value.items()
             make_path = Fields._compliant_constructor
@@ -217,26 +223,29 @@ class Filter(JSONPath):
         ]
 
     @staticmethod
-    def _datum(data, root):
+    def _datum(data: t.Any, root: t.Any) -> DatumInContext:
         """Wrap *data* so that `$` resolves to *root*."""
 
         if data is root:
             return DatumInContext(data)
         return DatumInContext(data, context=DatumInContext(root))
 
-    def filter(self, fn, data):
+    def filter(self, fn: FilterFunction, data: t.Any) -> t.Any:
         return self._filter_with_root(fn, data, data)
 
-    def _filter_with_root(self, fn, data, root):
+    def _filter_with_root(self, fn: FilterFunction, data: t.Any, root: t.Any) -> t.Any:
         # Reverse the order to ensure indices are preserved upon removal.
         for datum in reversed(self.find(self._datum(data, root))):
             datum.path.filter(fn, data)
         return data
 
-    def update(self, data, val):
+    def update(self, data: t.Any, val: t.Any) -> t.Any:
         return self._update_with_root(data, val, data)
 
-    def _update_with_root(self, data, val, root):
+    def _update_with_root(self, data: t.Any, val: t.Any, root: t.Any) -> t.Any:
+        # `Any` keeps mypy from narrowing the keys to `int` or `str`.
+        candidates: t.Any
+        make_path: t.Callable[[t.Any], JSONPath]
         if isinstance(data, list):
             candidates = enumerate(data)
             make_path = Index
@@ -261,7 +270,7 @@ class Filter(JSONPath):
         return data
 
     @staticmethod
-    def _set(data, key, val):
+    def _set(data: t.Any, key: t.Any, val: t.Any) -> None:
         """Set the member of *data* at *key* (an index or a field name)."""
 
         if callable(val):
@@ -269,7 +278,7 @@ class Filter(JSONPath):
         else:
             data[key] = val
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.expressions!r})"
 
     def __str__(self) -> str:
@@ -286,19 +295,24 @@ class Filter(JSONPath):
         )
         return f"[?{' && '.join(parts)}]"
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return isinstance(other, Filter) and self.expressions == other.expressions
 
 
 class Expression(JSONPath):
     """The JSONQuery expression"""
 
-    def __init__(self, target, op, value) -> None:
+    def __init__(
+        self,
+        target: JSONPath,
+        op: ExpressionOperator | None,
+        value: t.Any,
+    ) -> None:
         self.target = target
         self.op = op
         self.value = value
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         wrapped_datum = DatumInContext.wrap(datum)
         found = self.target.find(wrapped_datum)
 
@@ -347,27 +361,31 @@ class Expression(JSONPath):
 
         return result
 
-    def _find_with_query_operand(self, datum, found):
+    def _find_with_query_operand(
+        self, datum: DatumInContext, found: list[DatumInContext]
+    ) -> list[DatumInContext]:
         """Compare the values found by the target to those found by the query operand.
 
         RFC 9535 section 2.3.5.2.2 says that two empty nodelists are equal,
         and that an empty nodelist is not equal to any value.
         """
 
+        # `find()` has already handled the existence test (`None`) and negation (`!`).
+        op = t.cast(StringOperator | t.Literal["=~"], self.op)
         values = [match.value for match in self.value.find(datum)]
         if not found or not values:
             # Nothing is equal to `null`, to `false`, or to anything else.
-            if EQUALITY_ONLY_OPERATOR_MAP[self.op](not found and not values):
+            if EQUALITY_ONLY_OPERATOR_MAP[op](not found and not values):
                 return found or [datum]
             return []
 
         return [
             match
             for match in found
-            if any(_compare(self.op, match.value, value) for value in values)
+            if any(_compare(op, match.value, value) for value in values)
         ]
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         return (
             isinstance(other, Expression)
             and self.target == other.target
@@ -375,7 +393,7 @@ class Expression(JSONPath):
             and self.value == other.value
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.op is None:
             return f"{self.__class__.__name__}({self.target!r})"
         else:
@@ -383,7 +401,7 @@ class Expression(JSONPath):
                 self.__class__.__name__, self.target, self.op, self.value
             )
 
-    def __str__(self):
+    def __str__(self) -> str:
         target = _query_to_str(self.target)
         if self.op is None:
             return target
@@ -421,15 +439,12 @@ class _BooleanOperation(JSONPath):
         for operand in operands:
             if type(operand) is type(self):
                 # Operands are already flat, so one level is all that can nest.
-                self.operands.extend(operand.operands)  # type: ignore[attr-defined]
+                self.operands.extend(operand.operands)
             else:
                 self.operands.append(operand)
 
     def __eq__(self, other: object) -> bool:
-        return (
-            type(self) is type(other)
-            and self.operands == other.operands  # type: ignore[attr-defined]
-        )
+        return type(self) is type(other) and self.operands == other.operands
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.operands!r})"
@@ -452,7 +467,7 @@ class And(_BooleanOperation):
 
     op = "&&"
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         if all(operand.find(datum) for operand in self.operands):
             return [DatumInContext.wrap(datum)]
         return []
@@ -467,7 +482,7 @@ class Or(_BooleanOperation):
 
     op = "||"
 
-    def find(self, datum):
+    def find(self, datum: t.Any) -> list[DatumInContext]:
         if any(operand.find(datum) for operand in self.operands):
             return [DatumInContext.wrap(datum)]
         return []

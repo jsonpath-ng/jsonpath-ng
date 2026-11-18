@@ -103,3 +103,36 @@ def test_queries_with_at_field_names_roundtrip(query):
     original = jsonpath_ng.ext.parse(query)
 
     assert jsonpath_ng.ext.parse(str(original)) == original
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        pytest.param("`sorted`", id="sorted-root"),
+        pytest.param("$.a.`sorted`", id="sorted-child"),
+        pytest.param("$.a.`sorted`.b", id="sorted-then-field"),
+        pytest.param("$.a.`sorted`[0]", id="sorted-then-index"),
+        pytest.param("$..`sorted`", id="sorted-descendants"),
+        pytest.param("$.a[?@.x > 1].`sorted`", id="sorted-after-filter"),
+        pytest.param("$.a[/b]", id="sort-expression"),
+        pytest.param(r"$[/a, \b]", id="sort-expressions"),
+        pytest.param("$.a[/b].c", id="sort-expression-then-field"),
+    ],
+)
+def test_queries_with_sorted_roundtrip(query):
+    original = jsonpath_ng.ext.parse(query)
+
+    assert jsonpath_ng.ext.parse(str(original)) == original
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        pytest.param("`sorted`", id="sorted-root"),
+        pytest.param("$.a.`sorted`", id="sorted-child"),
+        pytest.param("$.a[/b]", id="sort-expression"),
+        pytest.param(r"$[/a, \b]", id="sort-expressions"),
+    ],
+)
+def test_sorted_str_matches_the_query(query):
+    assert str(jsonpath_ng.ext.parse(query)) == query

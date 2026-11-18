@@ -14,15 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import argparse
 import glob
 import json
 import sys
+import typing as t
 
-from jsonpath_ng import parse
+from jsonpath_ng.jsonpath import DatumInContext
+from jsonpath_ng.jsonpath import JSONPath
+from jsonpath_ng.parser import parse
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Search JSON files (or stdin) according to a JSONPath expression.",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -71,11 +76,11 @@ def main():
                     _print_matches(_find_matches_for_file(expr, f))
 
 
-def _find_matches_for_file(expr, f):
+def _find_matches_for_file(expr: JSONPath, f: t.TextIO) -> list[DatumInContext]:
     return expr.find(json.load(f))
 
 
-def _print_matches(matches):
+def _print_matches(matches: t.Iterable[DatumInContext]) -> None:
     for match in matches:
         print(json.dumps(match.value))
 

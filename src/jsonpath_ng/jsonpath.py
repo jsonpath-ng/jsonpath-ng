@@ -22,7 +22,7 @@ LIST_KEY = object()
 
 
 Container: typing.TypeAlias = dict[typing.Any, typing.Any] | list[typing.Any]
-FilterFunction: typing.TypeAlias = typing.Callable[[Container], bool]
+FilterFunction: typing.TypeAlias = typing.Callable[[typing.Any], bool]
 
 
 class JSONPath:
@@ -68,13 +68,13 @@ class JSONPath:
         return self.update(data, val)
 
     def _filter_with_root(
-        self, fn: FilterFunction, data: Container, root: typing.Any
-    ) -> Container | None:
+        self, fn: FilterFunction, data: typing.Any, root: typing.Any
+    ) -> typing.Any:
         """Like `filter()`, but also told the root of the query argument."""
 
         return self.filter(fn, data)
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         """
         Returns `data` with the specified path filtering nodes according
         the filter evaluation result returned by the filter function.
@@ -82,7 +82,7 @@ class JSONPath:
         Arguments:
             fn (function): unary function that accepts one argument
                 and returns bool.
-            data (dict|list|tuple): JSON object to filter.
+            data: The JSON value to filter, which is usually a dict or a list.
         """
 
         raise NotImplementedError()
@@ -285,7 +285,7 @@ class Root(JSONPath):
     def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return val
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         return data if fn(data) else None
 
     def __str__(self) -> str:
@@ -312,7 +312,7 @@ class This(JSONPath):
     def update(self, data: typing.Any, val: typing.Any) -> typing.Any:
         return val
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         return data if fn(data) else None
 
     def __str__(self) -> str:
@@ -378,12 +378,12 @@ class Child(JSONPath):
             self.right.update_or_create(datum.value, val)
         return _clean_list_keys(data)
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         return self._filter_with_root(fn, data, data)
 
     def _filter_with_root(
-        self, fn: FilterFunction, data: Container, root: typing.Any
-    ) -> Container | None:
+        self, fn: FilterFunction, data: typing.Any, root: typing.Any
+    ) -> typing.Any:
         for datum in self.left.find(data):
             self.right._filter_with_root(fn, datum.value, root)
         return data
@@ -396,14 +396,19 @@ class Child(JSONPath):
         )
 
     def __str__(self) -> str:
-        # Special case: If the right side is a `SortedThis` or `Filter` instance,
+        # Special case: If the right side is a `Filter` instance
+        # or a `SortedThis` instance that is written as a bracketed list of sorts,
         # do not inject a period between the left and right sides.
         # Adding a period would corrupt the syntax and prevent re-parsing.
+        # A `SortedThis` with no expressions is written as `sorted`
+        # and needs the period, like any other name.
         # Current module design creates circular imports, so imports happen here.
         from .ext.filter import Filter
         from .ext.iterable import SortedThis
 
-        if isinstance(self.right, (SortedThis, Filter)):
+        if isinstance(self.right, Filter) or (
+            isinstance(self.right, SortedThis) and self.right.expressions
+        ):
             return f"{self.left}{self.right}"
 
         return f"{self.left}.{self.right}"
@@ -463,7 +468,7 @@ class Where(JSONPath):
             datum.path.update(data, val)
         return data
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         for datum in self.find(data):
             datum.path.filter(fn, datum.value)
         return data
@@ -603,12 +608,12 @@ class Descendants(JSONPath):
 
         return data
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container | None:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         return self._filter_with_root(fn, data, data)
 
     def _filter_with_root(
-        self, fn: FilterFunction, data: Container, root: typing.Any
-    ) -> Container | None:
+        self, fn: FilterFunction, data: typing.Any, root: typing.Any
+    ) -> typing.Any:
         # Get all left matches into a list.
         # Some `find()` implementations (e.g. `Filter`, `SortedThis`)
         # return a bare datum instead of a list, so this is typed as `Any`.
@@ -842,7 +847,7 @@ class Fields(JSONPath):
                         data[field] = val
         return data
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         if self._deprecated_wildcard_use and isinstance(data, list):
             return _filter_array_elements(fn, data)
         if data is not None and isinstance(data, dict):
@@ -935,7 +940,7 @@ class Wildcard(JSONPath):
             data, val, create=False
         )
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         if isinstance(data, list):
             return _filter_array_elements(fn, data)
         if isinstance(data, dict):
@@ -1031,7 +1036,7 @@ class Index(JSONPath):
                         raise e
         return data
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         if not isinstance(data, list):
             return data
 
@@ -1162,7 +1167,7 @@ class Slice(JSONPath):
             datum.path.update(data, val)
         return data
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container:
+    def filter(self, fn: FilterFunction, data: typing.Any) -> typing.Any:
         if isinstance(data, dict):
             if self._deprecated_wildcard_use:
                 for key, value in list(data.items()):
