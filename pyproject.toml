@@ -68,6 +68,8 @@ source = [
 omit = [
     "*/jsonpath_ng/_ply/*",
     "*/jsonpath_ng/_ply_tables/*",
+    # Omit the type annotation tests, which never execute.
+    "*/tests/test_type_annotations/*",
 ]
 
 [tool.coverage.paths]
@@ -102,9 +104,15 @@ force_single_line = true
 # ----
 
 [tool.mypy]
-packages = "jsonpath_ng"
+packages = [
+    "jsonpath_ng",
+    "test_type_annotations",
+]
+# Put `tests/` on the path so that `test_type_annotations` can be found.
+mypy_path = "$MYPY_CONFIG_FILE_DIR/tests"
 strict = true
 enable_error_code = [
+    "redundant-expr",
     "truthy-iterable",
 ]
 warn_unreachable = true

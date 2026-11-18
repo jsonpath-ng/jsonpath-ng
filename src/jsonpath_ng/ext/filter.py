@@ -24,7 +24,6 @@ from .. import Index
 from .. import JSONPath
 from .. import Root
 from .. import This
-from ..jsonpath import Container
 from ..jsonpath import FilterFunction
 from .arithmetic import Operation
 
@@ -231,12 +230,10 @@ class Filter(JSONPath):
             return DatumInContext(data)
         return DatumInContext(data, context=DatumInContext(root))
 
-    def filter(self, fn: FilterFunction, data: Container) -> Container:
+    def filter(self, fn: FilterFunction, data: t.Any) -> t.Any:
         return self._filter_with_root(fn, data, data)
 
-    def _filter_with_root(
-        self, fn: FilterFunction, data: Container, root: t.Any
-    ) -> Container:
+    def _filter_with_root(self, fn: FilterFunction, data: t.Any, root: t.Any) -> t.Any:
         # Reverse the order to ensure indices are preserved upon removal.
         for datum in reversed(self.find(self._datum(data, root))):
             datum.path.filter(fn, data)
